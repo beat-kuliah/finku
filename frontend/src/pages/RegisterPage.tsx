@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AuthApiError, useAuth } from "@/store/auth";
 import { motion } from "framer-motion";
 import {
   Eye,
@@ -17,9 +18,11 @@ import BlobBackground from "@/components/BlobBackground";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const register = useAuth((s) => s.register);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -28,18 +31,32 @@ export default function RegisterPage() {
 
   const pwStrength = passwordStrength(form.password);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
       alert("Centang dulu syarat & kebijakan privasinya ya 😉");
       return;
     }
+    setError(null);
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await register(form.name, form.email, form.password);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      if (err instanceof AuthApiError) {
+        if (err.status === 409) {
+          setError("Email ini sudah terdaftar. Coba login atau pakai email lain.");
+        } else if (err.status === 429) {
+          setError("Terlalu banyak percobaan. Coba lagi nanti.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Gagal menghubungi server. Pastikan backend jalan.");
+      }
+    } finally {
       setLoading(false);
-      alert("Akun berhasil dibuat (mock)! Onboarding coming next 🎉");
-      navigate("/dashboard");
-    }, 1000);
+    }
   };
 
   return (
@@ -127,6 +144,12 @@ export default function RegisterPage() {
             </div>
 
             <div className="divider-or mb-5">atau pake email</div>
+
+            {error && (
+              <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <Field

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AuthApiError, useAuth } from "@/store/auth";
 import { motion } from "framer-motion";
 import {
   Eye,
@@ -15,18 +16,34 @@ import BlobBackground from "@/components/BlobBackground";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const login = useAuth((s) => s.login);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await login(form.email, form.password);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      if (err instanceof AuthApiError) {
+        if (err.status === 429) {
+          setError("Terlalu banyak percobaan. Coba lagi nanti.");
+        } else if (err.status === 423) {
+          setError("Akun terkunci sementara karena terlalu banyak gagal login. Coba lagi dalam 15 menit.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Gagal menghubungi server. Pastikan backend jalan.");
+      }
+    } finally {
       setLoading(false);
-      alert("Login berhasil (mock). Dashboard coming soon! 🚀");
-      navigate("/dashboard");
-    }, 900);
+    }
   };
 
   return (
@@ -101,6 +118,12 @@ export default function LoginPage() {
             </div>
 
             <div className="divider-or mb-5">atau</div>
+
+            {error && (
+              <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

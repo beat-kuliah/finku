@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import BlobBackground from "@/components/BlobBackground";
+import { useAuth } from "@/store/auth";
 
 type ActiveSection =
   | "dashboard"
@@ -53,6 +54,7 @@ export default function AppShell({
   children,
 }: AppShellProps) {
   const navigate = useNavigate();
+  const logout = useAuth((s) => s.logout);
   const mobileActive = activeSection === "stats" || activeSection === "goals" ? "dashboard" : activeSection;
   const [mobileSelected, setMobileSelected] = useState<ActiveSection>(mobileActive);
   const navTimeoutRef = useRef<number | null>(null);
@@ -68,6 +70,11 @@ export default function AppShell({
       }
     };
   }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
 
   const handleMobileNav = (key: ActiveSection, to: string) => {
     if (mobileSelected === key && mobileActive === key) {
@@ -107,7 +114,12 @@ export default function AppShell({
           </nav>
 
           <div className="mt-auto space-y-1.5">
-            <SidebarNavItem icon={<LogOut className="w-4 h-4" />} label="Logout" danger />
+            <SidebarNavItem
+              icon={<LogOut className="w-4 h-4" />}
+              label="Logout"
+              danger
+              onClick={handleLogout}
+            />
           </div>
         </aside>
 
@@ -231,12 +243,14 @@ function SidebarNavItem({
   active = false,
   danger = false,
   to,
+  onClick,
 }: {
   icon: ReactNode;
   label: string;
   active?: boolean;
   danger?: boolean;
   to?: string;
+  onClick?: () => void | Promise<void>;
 }) {
   const stateClass = danger
     ? "text-red-300 hover:text-red-200 hover:bg-red-500/10"
@@ -256,7 +270,7 @@ function SidebarNavItem({
   }
 
   return (
-    <button className={className}>
+    <button type="button" className={className} onClick={() => void onClick?.()}>
       {icon}
       <span>{label}</span>
     </button>
