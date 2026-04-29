@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
+import { useTheme } from "@/lib/theme";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -11,8 +13,15 @@ import StatsPage from "./pages/StatsPage";
 import GoalsPage from "./pages/GoalsPage";
 
 export default function App() {
+  const { isDarkMode } = useTheme();
   return (
-    <Routes>
+    <>
+      <Toaster
+        theme={isDarkMode ? "dark" : "light"}
+        position="top-center"
+        richColors
+      />
+      <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -67,5 +76,6 @@ export default function App() {
       <Route path="/settings" element={<Navigate to="/profile" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AtSign, Sparkles, ArrowRight } from "lucide-react";
 import { AuthApiError, useAuth } from "@/store/auth";
+import { toast } from "sonner";
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,32}$/;
 
@@ -20,7 +21,6 @@ export default function SetUsernameModal() {
   const [value, setValue] = useState("");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [loadedSuggestion, setLoadedSuggestion] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -52,18 +52,18 @@ export default function SetUsernameModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (clientErr) {
-      setError(clientErr);
+      toast.error(clientErr);
       return;
     }
-    setError(null);
     setLoading(true);
     try {
       await setUsername(value.trim());
+      toast.success("Username tersimpan.");
     } catch (err) {
       if (err instanceof AuthApiError) {
-        setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Gagal menghubungi server.");
+        toast.error("Gagal menghubungi server.");
       }
     } finally {
       setLoading(false);
@@ -86,12 +86,6 @@ export default function SetUsernameModal() {
             karakter, huruf/angka/underscore.
           </p>
         </div>
-
-        {error && (
-          <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 mb-4">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -17,6 +17,7 @@ import {
 import Logo from "@/components/Logo";
 import BlobBackground from "@/components/BlobBackground";
 import { isGoogleEnabled, signInWithGoogle } from "@/lib/oauth";
+import { toast } from "sonner";
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,32}$/;
 
@@ -28,45 +29,55 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
   const [agreed, setAgreed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     username: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const pwStrength = passwordStrength(form.password);
   const usernameInvalid = form.username.length > 0 && !USERNAME_RE.test(form.username);
+  const passwordsMatch =
+    form.confirmPassword.length === 0 || form.password === form.confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
-      alert("Centang dulu syarat & kebijakan privasinya ya 😉");
+      toast.error("Please accept the terms & privacy policy first 😉");
       return;
     }
     if (!USERNAME_RE.test(form.username)) {
-      setError("Username harus 3-32 karakter, hanya huruf, angka, dan underscore.");
+      toast.error(
+        "Username must be 3-32 characters: letters, numbers, and underscore only.",
+      );
       return;
     }
-    setError(null);
+    if (!passwordsMatch) {
+      toast.error("Password and confirmation password do not match.");
+      return;
+    }
     setLoading(true);
     try {
       await register(form.name, form.username, form.email, form.password);
+      toast.success("Account created successfully. Welcome!");
       navigate("/dashboard", { replace: true });
     } catch (err) {
       if (err instanceof AuthApiError) {
         if (err.code === "USERNAME_TAKEN") {
-          setError("Username sudah dipakai. Coba yang lain.");
+          toast.error("Username is already taken. Please choose another.");
         } else if (err.code === "EMAIL_TAKEN" || err.status === 409) {
-          setError("Email atau username sudah terdaftar. Coba login atau pakai yang lain.");
+          toast.error(
+            "Email or username is already registered. Please log in or use another one.",
+          );
         } else if (err.status === 429) {
-          setError("Terlalu banyak percobaan. Coba lagi nanti.");
+          toast.error("Too many attempts. Please try again later.");
         } else {
-          setError(err.message);
+          toast.error("Registration failed. Please try again.");
         }
       } else {
-        setError("Gagal menghubungi server. Pastikan backend jalan.");
+        toast.error("Failed to contact server. Make sure the backend is running.");
       }
     } finally {
       setLoading(false);
@@ -74,15 +85,14 @@ export default function RegisterPage() {
   };
 
   const handleGoogle = async () => {
-    setError(null);
     setOauthLoading("google");
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
+      toast.success("Logged in with Google successfully.");
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Login Google gagal.";
-      setError(msg);
+      toast.error("Google login failed.");
     } finally {
       setOauthLoading(null);
     }
@@ -179,12 +189,6 @@ export default function RegisterPage() {
 
                 <div className="divider-or mb-5">atau pake email</div>
               </>
-            )}
-
-            {error && (
-              <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                {error}
-              </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -290,6 +294,34 @@ export default function RegisterPage() {
                       </span>
                     </div>
                   </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
+                  Konfirmasi Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder="Ulangi password"
+                    value={form.confirmPassword}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        confirmPassword: e.target.value,
+                      }))
+                    }
+                    className="input !pl-11"
+                  />
+                </div>
+                {form.confirmPassword.length > 0 && !passwordsMatch && (
+                  <p className="text-[11px] text-red-300 mt-2">
+                    Password dan konfirmasi password harus sama.
+                  </p>
                 )}
               </div>
 

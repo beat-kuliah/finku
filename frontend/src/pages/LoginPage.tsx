@@ -14,6 +14,7 @@ import {
 import Logo from "@/components/Logo";
 import BlobBackground from "@/components/BlobBackground";
 import { isGoogleEnabled, signInWithGoogle } from "@/lib/oauth";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -23,26 +24,27 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
   const [form, setForm] = useState({ identifier: "", password: "" });
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
     try {
       await login(form.identifier, form.password);
+      toast.success("Berhasil masuk. Yuk lanjut!");
       navigate("/dashboard", { replace: true });
     } catch (err) {
       if (err instanceof AuthApiError) {
         if (err.status === 429) {
-          setError("Terlalu banyak percobaan. Coba lagi nanti.");
+          toast.error("Terlalu banyak percobaan. Coba lagi nanti.");
         } else if (err.status === 423) {
-          setError("Akun terkunci sementara karena terlalu banyak gagal login. Coba lagi dalam 15 menit.");
+          toast.error(
+            "Akun terkunci sementara karena terlalu banyak gagal login. Coba lagi dalam 15 menit.",
+          );
         } else {
-          setError(err.message);
+          toast.error(err.message);
         }
       } else {
-        setError("Gagal menghubungi server. Pastikan backend jalan.");
+        toast.error("Gagal menghubungi server. Pastikan backend jalan.");
       }
     } finally {
       setLoading(false);
@@ -50,15 +52,15 @@ export default function LoginPage() {
   };
 
   const handleGoogle = async () => {
-    setError(null);
     setOauthLoading("google");
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
+      toast.success("Berhasil masuk lewat Google.");
       navigate("/dashboard", { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login Google gagal.";
-      setError(msg);
+      toast.error(msg);
     } finally {
       setOauthLoading(null);
     }
@@ -141,12 +143,6 @@ export default function LoginPage() {
 
                 <div className="divider-or mb-5">atau</div>
               </>
-            )}
-
-            {error && (
-              <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                {error}
-              </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">

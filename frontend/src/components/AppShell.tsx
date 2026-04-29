@@ -15,6 +15,7 @@ import {
 import Logo from "@/components/Logo";
 import BlobBackground from "@/components/BlobBackground";
 import { useAuth } from "@/store/auth";
+import { toast } from "sonner";
 
 type ActiveSection =
   | "dashboard"
@@ -229,7 +230,7 @@ function BottomNavItem({
 function BottomNavCenter() {
   return (
     <button
-      onClick={() => alert("Fitur tambah transaksi akan segera aktif ✨")}
+      onClick={() => toast.info("Fitur tambah transaksi akan segera aktif ✨")}
       className="w-12 h-12 rounded-2xl grid place-items-center text-white/90 hover:text-white"
     >
       <Plus className="w-7 h-7" />

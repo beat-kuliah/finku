@@ -20,6 +20,7 @@ import AppShell from "@/components/AppShell";
 import { useTheme } from "@/lib/theme";
 import { AuthApiError, useAuth } from "@/store/auth";
 import { isGoogleEnabled, signInWithGoogle } from "@/lib/oauth";
+import { toast } from "sonner";
 
 const PROVIDER_LABELS: Record<string, string> = {
   password: "Email & Password",
@@ -36,8 +37,6 @@ export default function ProfilePage() {
 
   const [usernameDraft, setUsernameDraft] = useState(user?.username ?? "");
   const [usernameSaving, setUsernameSaving] = useState(false);
-  const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [usernameOk, setUsernameOk] = useState(false);
 
   const [pwForm, setPwForm] = useState({
     currentPassword: "",
@@ -46,11 +45,8 @@ export default function ProfilePage() {
   });
   const [showPw, setShowPw] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
-  const [pwError, setPwError] = useState<string | null>(null);
-  const [pwOk, setPwOk] = useState(false);
 
   const [identityBusy, setIdentityBusy] = useState<string | null>(null);
-  const [identityError, setIdentityError] = useState<string | null>(null);
 
   const [prefs, setPrefs] = useState({
     pushBudgetWarning: true,
@@ -75,14 +71,12 @@ export default function ProfilePage() {
   const hasPassword = user.hasPassword;
 
   const handleSaveUsername = async () => {
-    setUsernameError(null);
-    setUsernameOk(false);
     setUsernameSaving(true);
     try {
       await setUsername(usernameDraft.trim());
-      setUsernameOk(true);
+      toast.success("Username tersimpan.");
     } catch (err) {
-      setUsernameError(err instanceof AuthApiError ? err.message : "Gagal menyimpan");
+      toast.error(err instanceof AuthApiError ? err.message : "Gagal menyimpan");
     } finally {
       setUsernameSaving(false);
     }
@@ -90,14 +84,12 @@ export default function ProfilePage() {
 
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPwError(null);
-    setPwOk(false);
     if (pwForm.newPassword.length < 8) {
-      setPwError("Password baru minimal 8 karakter.");
+      toast.error("Password baru minimal 8 karakter.");
       return;
     }
     if (pwForm.newPassword !== pwForm.confirmNewPassword) {
-      setPwError("Konfirmasi password tidak cocok.");
+      toast.error("Konfirmasi password tidak cocok.");
       return;
     }
     setPwSaving(true);
@@ -107,10 +99,10 @@ export default function ProfilePage() {
         newPassword: pwForm.newPassword,
         confirmNewPassword: pwForm.confirmNewPassword,
       });
-      setPwOk(true);
+      toast.success("Password berhasil disimpan.");
       setPwForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
     } catch (err) {
-      setPwError(err instanceof AuthApiError ? err.message : "Gagal menyimpan");
+      toast.error(err instanceof AuthApiError ? err.message : "Gagal menyimpan");
     } finally {
       setPwSaving(false);
     }
@@ -118,26 +110,28 @@ export default function ProfilePage() {
 
   const handleUnlink = async (provider: string) => {
     if (!confirm(`Lepas akun ${PROVIDER_LABELS[provider] ?? provider}?`)) return;
-    setIdentityError(null);
     setIdentityBusy(provider);
     try {
       await unlinkProvider(provider);
+      toast.success(
+        `${PROVIDER_LABELS[provider] ?? provider} berhasil dilepas dari akun.`,
+      );
     } catch (err) {
-      setIdentityError(err instanceof AuthApiError ? err.message : "Gagal melepas akun");
+      toast.error(err instanceof AuthApiError ? err.message : "Gagal melepas akun");
     } finally {
       setIdentityBusy(null);
     }
   };
 
   const handleLinkGoogle = async () => {
-    setIdentityError(null);
     setIdentityBusy("google");
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
+      toast.success("Google berhasil dihubungkan.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal hubungkan Google";
-      setIdentityError(msg);
+      toast.error(msg);
     } finally {
       setIdentityBusy(null);
     }
@@ -150,7 +144,9 @@ export default function ProfilePage() {
       desktopSubtitle="Akun kamu"
       rightAction={
         <button
-          onClick={() => alert("Preferensi finansial belum tersinkron (mock).")}
+          onClick={() =>
+            toast.info("Preferensi finansial belum tersinkron (mock).")
+          }
           className="btn-primary !px-4 !py-2 text-sm"
         >
           <Save className="w-4 h-4" />
@@ -210,19 +206,11 @@ export default function ProfilePage() {
                 maxLength={32}
                 onChange={(e) => {
                   setUsernameDraft(e.target.value.replace(/\s/g, ""));
-                  setUsernameOk(false);
-                  setUsernameError(null);
                 }}
                 placeholder="username_kamu"
                 spellCheck={false}
               />
             </div>
-            {usernameError && (
-              <p className="text-[11px] text-red-300 mt-2">{usernameError}</p>
-            )}
-            {usernameOk && (
-              <p className="text-[11px] text-neon-lime mt-2">Username tersimpan.</p>
-            )}
             <button
               onClick={handleSaveUsername}
               disabled={
@@ -257,17 +245,6 @@ export default function ProfilePage() {
               ? "Masukkan password lama untuk konfirmasi, lalu password baru."
               : "Akun kamu belum punya password (login via social). Set sekarang biar bisa login pakai email/username juga."}
           </p>
-
-          {pwError && (
-            <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              {pwError}
-            </div>
-          )}
-          {pwOk && (
-            <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-              Password berhasil disimpan.
-            </div>
-          )}
 
           <form onSubmit={handleSavePassword} className="space-y-3">
             {hasPassword && (
@@ -327,12 +304,6 @@ export default function ProfilePage() {
           <p className="text-xs text-white/60">
             Hubungkan akun supaya bisa login lewat berbagai cara.
           </p>
-
-          {identityError && (
-            <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              {identityError}
-            </div>
-          )}
 
           <div className="space-y-2">
             <ProviderRow
