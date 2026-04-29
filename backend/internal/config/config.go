@@ -33,6 +33,7 @@ type Config struct {
 	CookieSecure      bool
 	CookieDomain      string
 	RefreshCookieName string
+	GoogleClientID    string
 }
 
 func Load() (*Config, error) {
@@ -58,6 +59,7 @@ func Load() (*Config, error) {
 		CookieSecure:      strings.EqualFold(getEnv("COOKIE_SECURE", "false"), "true"),
 		CookieDomain:      os.Getenv("COOKIE_DOMAIN"),
 		RefreshCookieName: getEnv("REFRESH_COOKIE_NAME", "refresh_token"),
+		GoogleClientID:    os.Getenv("GOOGLE_CLIENT_ID"),
 	}
 
 	secret := os.Getenv("JWT_SECRET")

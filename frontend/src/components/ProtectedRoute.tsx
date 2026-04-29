@@ -1,9 +1,12 @@
 import { useEffect, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/store/auth";
+import SetUsernameModal from "@/components/SetUsernameModal";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { status, bootstrap } = useAuth();
+  const status = useAuth((s) => s.status);
+  const user = useAuth((s) => s.user);
+  const bootstrap = useAuth((s) => s.bootstrap);
   const location = useLocation();
 
   useEffect(() => {
@@ -24,5 +27,12 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  return <>{children}</>;
+  const needsUsername = !!user && (!user.username || user.username.trim() === "");
+
+  return (
+    <>
+      {children}
+      {needsUsername && <SetUsernameModal />}
+    </>
+  );
 }

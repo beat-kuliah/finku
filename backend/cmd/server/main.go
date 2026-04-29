@@ -50,7 +50,13 @@ func main() {
 
 	q := sqlc.New(pool)
 	access := token.NewAccessIssuer(cfg.JWTSecret, cfg.AccessTokenTTL)
-	svc := auth.NewService(cfg, q, rdb, access)
+
+	var googleVerif auth.GoogleVerifier
+	if cfg.GoogleClientID != "" {
+		googleVerif = auth.NewGoogleIDTokenVerifier(cfg.GoogleClientID)
+	}
+
+	svc := auth.NewService(cfg, q, rdb, access, googleVerif)
 	h := auth.NewHandler(cfg, svc)
 	authMw := middleware.NewAuth(access, rdb)
 	rateMw := middleware.NewRateLimiter(rdb)
@@ -85,10 +91,16 @@ func main() {
 	r.Route("/api/auth", func(r chi.Router) {
 		r.With(rateMw.Limit).Post("/register", h.Register)
 		r.With(rateMw.Limit).Post("/login", h.Login)
+		r.With(rateMw.Limit).Post("/oauth/google", h.OAuthGoogle)
 		r.Post("/refresh", h.Refresh)
 		r.Group(func(r chi.Router) {
 			r.Use(authMw.Require)
 			r.Get("/me", h.Me)
+			r.With(rateMw.Limit).Patch("/password", h.UpdatePassword)
+			r.With(rateMw.Limit).Patch("/username", h.UpdateUsername)
+			r.Get("/username/suggest", h.SuggestUsername)
+			r.Get("/identities", h.ListIdentities)
+			r.Delete("/identities/{provider}", h.UnlinkIdentity)
 			r.Post("/logout", h.Logout)
 		})
 	})

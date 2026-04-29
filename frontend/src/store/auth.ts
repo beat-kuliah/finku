@@ -5,6 +5,9 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
+  username: string | null;
+  hasPassword: boolean;
+  providers: string[];
   monthlyIncome?: number | null;
   payday?: number | null;
   currency: string;
@@ -14,15 +17,31 @@ export type AuthUser = {
 
 export type AuthStatus = "idle" | "loading" | "ready" | "unauthenticated";
 
+type UpdatePasswordInput = {
+  currentPassword?: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
+
 type AuthState = {
   user: AuthUser | null;
   accessToken: string | null;
   status: AuthStatus;
   setAccessToken: (t: string | null) => void;
   bootstrap: () => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  register: (
+    name: string,
+    username: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
   logout: () => Promise<void>;
+  setUsername: (username: string) => Promise<AuthUser>;
+  updatePassword: (input: UpdatePasswordInput) => Promise<AuthUser>;
+  fetchUsernameSuggestion: () => Promise<string>;
+  unlinkProvider: (provider: string) => Promise<AuthUser>;
 };
 
 export class AuthApiError extends Error {
@@ -34,6 +53,15 @@ export class AuthApiError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+type ApiErrorBody = {
+  error?: { code?: string; message?: string };
+};
+
+async function readError(res: Response, fallback: string): Promise<AuthApiError> {
+  const body = (await res.json().catch(() => ({}))) as ApiErrorBody;
+  return new AuthApiError(body.error?.message ?? fallback, res.status, body.error?.code);
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -75,46 +103,45 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
 
-  login: async (email, password) => {
+  login: async (identifier, password) => {
     const res = await fetch(apiUrl("/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
       credentials: "include",
     });
-    const data = (await res.json().catch(() => ({}))) as {
-      error?: { code?: string; message?: string };
-      accessToken?: string;
-      user?: AuthUser;
-    };
-    if (!res.ok) {
-      const msg = data.error?.message ?? "Login failed";
-      const code = data.error?.code;
-      throw new AuthApiError(msg, res.status, code);
-    }
+    if (!res.ok) throw await readError(res, "Login gagal");
+    const data = (await res.json()) as { accessToken?: string; user?: AuthUser };
     if (!data.accessToken || !data.user) {
       throw new AuthApiError("Invalid response", res.status);
     }
     set({ accessToken: data.accessToken, user: data.user, status: "ready" });
   },
 
-  register: async (name, email, password) => {
+  loginWithGoogle: async (idToken) => {
+    const res = await fetch(apiUrl("/auth/oauth/google"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+      credentials: "include",
+    });
+    if (!res.ok) throw await readError(res, "Login Google gagal");
+    const data = (await res.json()) as { accessToken?: string; user?: AuthUser };
+    if (!data.accessToken || !data.user) {
+      throw new AuthApiError("Invalid response", res.status);
+    }
+    set({ accessToken: data.accessToken, user: data.user, status: "ready" });
+  },
+
+  register: async (name, username, email, password) => {
     const res = await fetch(apiUrl("/auth/register"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, username, email, password }),
       credentials: "include",
     });
-    const data = (await res.json().catch(() => ({}))) as {
-      error?: { code?: string; message?: string };
-      accessToken?: string;
-      user?: AuthUser;
-    };
-    if (!res.ok) {
-      const msg = data.error?.message ?? "Registration failed";
-      const code = data.error?.code;
-      throw new AuthApiError(msg, res.status, code);
-    }
+    if (!res.ok) throw await readError(res, "Pendaftaran gagal");
+    const data = (await res.json()) as { accessToken?: string; user?: AuthUser };
     if (!data.accessToken || !data.user) {
       throw new AuthApiError("Invalid response", res.status);
     }
@@ -135,6 +162,64 @@ export const useAuth = create<AuthState>((set, get) => ({
       }
     }
     set({ user: null, accessToken: null, status: "unauthenticated" });
+  },
+
+  setUsername: async (username) => {
+    const t = get().accessToken;
+    const res = await fetch(apiUrl("/auth/username"), {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+      },
+      body: JSON.stringify({ username }),
+      credentials: "include",
+    });
+    if (!res.ok) throw await readError(res, "Gagal menyimpan username");
+    const data = (await res.json()) as { user: AuthUser };
+    set({ user: data.user });
+    return data.user;
+  },
+
+  updatePassword: async (input) => {
+    const t = get().accessToken;
+    const res = await fetch(apiUrl("/auth/password"), {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+      },
+      body: JSON.stringify(input),
+      credentials: "include",
+    });
+    if (!res.ok) throw await readError(res, "Gagal menyimpan password");
+    const data = (await res.json()) as { user: AuthUser };
+    set({ user: data.user });
+    return data.user;
+  },
+
+  fetchUsernameSuggestion: async () => {
+    const t = get().accessToken;
+    const res = await fetch(apiUrl("/auth/username/suggest"), {
+      headers: t ? { Authorization: `Bearer ${t}` } : {},
+      credentials: "include",
+    });
+    if (!res.ok) throw await readError(res, "Gagal mengambil saran username");
+    const data = (await res.json()) as { suggestion: string };
+    return data.suggestion;
+  },
+
+  unlinkProvider: async (provider) => {
+    const t = get().accessToken;
+    const res = await fetch(apiUrl(`/auth/identities/${encodeURIComponent(provider)}`), {
+      method: "DELETE",
+      headers: t ? { Authorization: `Bearer ${t}` } : {},
+      credentials: "include",
+    });
+    if (!res.ok) throw await readError(res, "Gagal melepas akun");
+    const data = (await res.json()) as { user: AuthUser };
+    set({ user: data.user });
+    return data.user;
   },
 }));
 

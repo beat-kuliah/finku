@@ -9,6 +9,8 @@ import (
 	"finku/backend/internal/config"
 	"finku/backend/internal/httpx"
 	"finku/backend/internal/middleware"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -99,6 +101,102 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	clearRefreshCookie(w, h.cfg)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
+		return
+	}
+	var in UpdatePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
+		return
+	}
+	dto, err := h.service.UpdatePassword(r.Context(), uid, in)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
+}
+
+func (h *Handler) UpdateUsername(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
+		return
+	}
+	var in UpdateUsernameRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
+		return
+	}
+	dto, err := h.service.UpdateUsername(r.Context(), uid, in)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
+}
+
+func (h *Handler) SuggestUsername(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
+		return
+	}
+	suggestion, err := h.service.SuggestUsername(r.Context(), uid)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, UsernameSuggestResponse{Suggestion: suggestion})
+}
+
+func (h *Handler) OAuthGoogle(w http.ResponseWriter, r *http.Request) {
+	var in OAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
+		return
+	}
+	resp, refreshJTI, err := h.service.LoginWithGoogle(r.Context(), in.IDToken)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	setRefreshCookie(w, h.cfg, refreshJTI)
+	httpx.JSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) ListIdentities(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
+		return
+	}
+	out, err := h.service.ListIdentities(r.Context(), uid)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"identities": out})
+}
+
+func (h *Handler) UnlinkIdentity(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
+		return
+	}
+	provider := chi.URLParam(r, "provider")
+	dto, err := h.service.UnlinkIdentity(r.Context(), uid, provider)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
 }
 
 func writeSvcErr(w http.ResponseWriter, err error) {
