@@ -43,12 +43,24 @@ func (c *Client) RDB() *redis.Client {
 	return c.rdb
 }
 
-// RateLimitAllow returns false if IP exceeded max requests in window.
+// RateLimitAllow returns false if IP exceeded the auth-tier limit in window.
+// Used for sensitive endpoints (login/register/oauth/password) where the
+// budget is intentionally tight to slow online attacks.
 func (c *Client) RateLimitAllow(ctx context.Context, ip string) (bool, error) {
-	key := "auth:rl:" + ip
+	return c.bucketAllow(ctx, "auth:rl:"+ip, c.cfg.AuthRateLimitMax, c.cfg.AuthRateLimitWin)
+}
+
+// GlobalRateLimitAllow returns false if IP exceeded the loose per-IP budget
+// applied to every /api/* request. Catches scrapers and runaway clients
+// without throttling a normal SPA session.
+func (c *Client) GlobalRateLimitAllow(ctx context.Context, ip string) (bool, error) {
+	return c.bucketAllow(ctx, "api:rl:"+ip, c.cfg.GlobalRateLimitMax, c.cfg.GlobalRateLimitWin)
+}
+
+func (c *Client) bucketAllow(ctx context.Context, key string, max int, window time.Duration) (bool, error) {
 	pipe := c.rdb.Pipeline()
 	incr := pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, c.cfg.AuthRateLimitWin)
+	pipe.Expire(ctx, key, window)
 	if _, err := pipe.Exec(ctx); err != nil {
 		return false, err
 	}
@@ -56,7 +68,7 @@ func (c *Client) RateLimitAllow(ctx context.Context, ip string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return int(n) <= c.cfg.AuthRateLimitMax, nil
+	return int(n) <= max, nil
 }
 
 // LockoutActive returns true if email is locked (failed attempts >= max).

@@ -87,6 +87,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID, chimw.RealIP, chimw.Recoverer)
+	r.Use(middleware.SecurityHeaders(cfg.IsProduction()))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			start := time.Now()
@@ -101,12 +102,13 @@ func main() {
 		})
 	})
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{cfg.CORSOrigin},
+		AllowedOrigins:   cfg.CORSOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+	r.Use(rateMw.LimitGlobal)
 
 	r.Get("/api/health", func(w http.ResponseWriter, _ *http.Request) {
 		httpx.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -180,7 +182,7 @@ func main() {
 	}
 
 	go func() {
-		slog.Info("listening", "addr", srv.Addr)
+		slog.Info("listening", "addr", srv.Addr, "env", cfg.AppEnv, "cors_origins", cfg.CORSOrigins)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server", "err", err)
 			os.Exit(1)
