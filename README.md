@@ -8,13 +8,21 @@ Stack: frontend **React 18 + TypeScript + Vite + Tailwind**, backend **Go (chi) 
 
 ## Keputusan desain (disepakati)
 
-Bagian ini mengunci perilaku **kategori, transaksi, dan analitik** yang sudah disepakati; implementasi kode mengikutinya.
+Bagian ini mengunci perilaku **kategori, transaksi, transfer wallet, dan analitik** yang sudah disepakati; implementasi kode mengikutinya.
 
 ### Kategori default per user
 
 - Setelah **registrasi** (atau saat **first access** ke domain finansial—bisa dipilih saat coding), sistem **menyalin template kategori default** ke akun user (satu baris per kategori milik `user_id`).
 - User **tidak wajib** menyelesaikan wizard “buat kategori dulu” sebelum mencatat transaksi; nilai cepat didapat dari **picker yang sudah terisi**.
-- Setiap transaksi **wajib punya `category_id`** di data; UX boleh default ke kategori semisal **“Lainnya”** / terakhir dipakai agar simpan satu ketukan tetap valid tanpa frikasi tinggi.
+- Untuk transaksi **income / expense** saja: setiap simpan **wajib punya `category_id`** di data; UX boleh default ke kategori semisal **“Lainnya”** / terakhir dipakai agar simpan satu ketukan tetap valid tanpa frikasi tinggi. **Transfer antar-wallet tidak memakai kategori** (lihat bawah).
+
+### Transfer antar-wallet
+
+- Tipe terpisah dari income/expense (mis. `kind = transfer` atau entitas khusus yang setara).
+- **Tanpa kategori**; user cukup memilih **wallet sumber**, **wallet tujuan**, **nominal**, **tanggal**, dan boleh mengisi **catatan / deskripsi** bebas (mis. untuk uang kuliah, topup e-wallet, bagi cash).
+- **Budget** dan **pie pengeluaran per kategori** mengacu pada expense biasa; **transfer tidak memakai kategori** sehingga secara desain **tidak masuk** perhitungan spent budget / slice kategori (menghindari double-count atau pengeluaran “palsu” di analitik gaya hidup).
+- Di **riwayat / saldo per wallet**, transfer tetap terlihat agar rekonsiliasi jelas (label “Transfer” + catatan jika ada).
+- Detail penyimpanan (satu baris ledger vs dua baris terhubung) bisa diputuskan saat implementasi tanpa mengubah UX di atas.
 
 ### Arsip (soft delete), bukan hapus permanen sebagai jalur utama
 
@@ -25,8 +33,8 @@ Bagian ini mengunci perilaku **kategori, transaksi, dan analitik** yang sudah di
 
 ### Analitik & dashboard tetap sejajar
 
-- **Total** income/expense per periode dihitung dari **transaksi**, bukan dari daftar kategori aktif saja.
-- **Breakdown per kategori** (pie, dll.) mengelompokkan transaksi per `category_id` **termasuk** yang menunjuk ke kategori arsip; di UI slice bisa diberi label semisal **“Arsip: …”** atau satu bucket **“Kategori (arsip)”** agar tidak membingungkan.
+- **Total** income/expense per periode dihitung dari **transaksi income & expense**, bukan dari daftar kategori aktif saja; **transfer** dikecualikan dari agregat “pengeluaran gaya hidup” / budget kecuali Anda sengaja menambahkan laporan “arus kas” terpisah.
+- **Breakdown per kategori** (pie, dll.) hanya untuk transaksi yang punya **`category_id`** (expense/income yang dikategorikan), **termasuk** yang menunjuk ke kategori arsip; di UI slice bisa diberi label semisal **“Arsip: …”** atau satu bucket **“Kategori (arsip)”** agar tidak membingungkan.
 - Hindari query chart yang hanya `FROM categories WHERE archived IS NULL` lalu join transaksi—itu membuat transaksi kategori arsip “hilang” dari chart padahal total transaksi tetap ada.
 
 ### Bulk pindah kategori (opsional, bukan default)
@@ -37,7 +45,7 @@ Bagian ini mengunci perilaku **kategori, transaksi, dan analitik** yang sudah di
 
 ## Pengalaman user: flow lengkap (produk target)
 
-Alur di bawah ini mendeskripsikan **apa yang bisa dilakukan user di web FinKu** dari pertama kali datang sampai pemakaian harian. Detail business rules (periode budget, transfer antar-wallet, dll.) bisa Anda rapikan di dokumen desain; README ini memetakan **scope fitur dan urutan pengalaman** yang selaras dengan halaman dan copy di repo.
+Alur di bawah ini mendeskripsikan **apa yang bisa dilakukan user di web FinKu** dari pertama kali datang sampai pemakaian harian. Detail yang masih bisa dirinci nanti (mis. periode budget vs payday); **transfer antar-wallet** sudah diatur di [Keputusan desain](#keputusan-desain-disepakati).
 
 ### 1. Sebelum login (publik)
 
@@ -72,7 +80,7 @@ flowchart LR
 
 | Tahap | User bisa | Output untuk langkah berikutnya |
 |-------|-----------|----------------------------------|
-| **Wallet** | Menambah, mengedit, menonaktifkan sumber dana (rekening, e-wallet, cash) | Setiap transaksi bisa diikat ke satu wallet |
+| **Wallet** | Menambah, mengedit, menonaktifkan sumber dana (rekening, e-wallet, cash); **transfer** antar-wallet (tanpa kategori, dengan catatan opsional) | Income/expense per wallet; pemindahan saldo internal antar dompet |
 | **Kategori** | Default **sudah terisi** per akun; tambah/edit; **arsip** / **batalkan arsip**; tidak perlu setup manual sebelum transaksi pertama | Klasifikasi transaksi + dasar budget & chart; histori tetap konsisten saat arsip |
 | **Budget** | Set limit per kategori (per periode, mis. bulanan) | Progress “spent vs limit” di dashboard & halaman Budget |
 | **Goals** | Membuat target tabungan (nama, target nominal, deadline opsional), melihat progress | Motivasi & tracking terpisah dari budget operasional |
@@ -81,7 +89,7 @@ flowchart LR
 
 | Area | User bisa |
 |------|-----------|
-| **Transaksi** | Menambah pemasukan/pengeluaran (jumlah, tanggal, deskripsi, wallet, **kategori**—selalu terisi di data, bisa default); mencari; memfilter; melihat riwayat; (target) export data |
+| **Transaksi** | **Income / expense:** jumlah, tanggal, deskripsi, wallet, **kategori** (wajib di data, bisa default). **Transfer:** dari wallet ke wallet, nominal, tanggal, **catatan opsional** (tanpa kategori). Mencari, memfilter, riwayat; (target) export |
 | **Dashboard** | Melihat saldo/ringkasan periode, trend pengeluaran, porsi kategori, cuplikan budget, transaksi terbaru, insight/streak (sesuai implementasi) |
 | **Budget** | Melihat semua kategori budget, progress, peringatan over-budget; menambah/mengedit limit |
 | **Stats** | Analitik: distribusi kategori, agregat per minggu/periode, pola spending |
@@ -141,7 +149,8 @@ Fitur di bawah menggabungkan **yang sudah terlihat di UI** dan **yang dipromosik
 
 ### Dompet (Wallet)
 
-- CRUD wallet; transaksi memilih wallet sumber/tujuan (termasuk konsep transfer antar-wallet jika produk mendukung)
+- CRUD wallet; setiap **income/expense** terikat satu wallet utama (sesuai model UI).
+- **Transfer antar-wallet:** pindah saldo antar dompet; **tanpa kategori**, **deskripsi/catatan opsional**; tidak memakan budget / pie kategori (lihat keputusan desain).
 
 ### Kategori
 
@@ -152,15 +161,16 @@ Fitur di bawah menggabungkan **yang sudah terlihat di UI** dan **yang dipromosik
 
 ### Transaksi
 
-- Catat income / expense dengan metadata (tanggal, judul, jumlah, kategori, wallet); **setiap simpan punya `category_id`** (bawaan form jika user tidak memilih manual).
-- Riwayat dengan ringkasan total income/expense per filter periode
+- **Income / expense:** tanggal, judul, jumlah, wallet, kategori — **`category_id` wajib** (default form jika user tidak memilih manual).
+- **Transfer:** wallet sumber & tujuan, nominal, tanggal, **catatan opsional**; **tanpa `category_id`**.
+- Riwayat gabungan atau terfilter; ringkasan **income/expense** per periode (transfer tidak mengotak-atik total expense kategori; tampil terpisah atau dijelaskan di UI)
 - Pencarian & filter (UI menyiapkan placeholder)
 - Entry cepat dari tombol `+` global
 
 ### Budget
 
 - Limit per kategori per periode; indikator % terpakai; status aman vs over budget
-- Link implisit ke agregat transaksi expense pada kategori yang sama
+- Agregat “spent” mengacu pada **expense dengan kategori**; **transfer antar-wallet tidak memakan budget**
 
 ### Goals
 
@@ -259,9 +269,10 @@ sequenceDiagram
 - **Seed kategori** saat `register` / OAuth create user atau endpoint idempotent `EnsureDefaultCategories(userID)`.
 - Query agregasi dashboard/stats: **dari transaksi** + join kategori (aktif/arsip) untuk label; hindari filter kategori aktif saja pada numerator chart.
 - State/cache di frontend untuk resource finansial dan invalidasi setelah mutasi.
-- Entry point **+** yang menyimpan transaksi dengan **`category_id` wajib** (default di client/server).
+- Entry point **+** yang menyimpan **income/expense** (`category_id` wajib + default) dan **transfer** (tanpa kategori, note opsional).
+- Model data: enum/jenis transaksi + nullable `category_id` hanya untuk jenis yang membutuhkan kategori.
 - Aturan periode finansial (kalender vs payday) agar agregasi budget dan chart konsisten.
 - Menjembatani preferensi user (`payday`, income, currency) dari profil ke API bila siap.
 - Perilaku **budget** saat kategori diarsip / di-unarchive (nonaktifkan limit vs restore) ditetapkan saat implementasi halaman Budget.
 
-README ini boleh diperbarui lagi untuk hal yang belum dikunci (mis. definisi transfer antar-wallet, aturan nama duplikat saat unarchive, snapshot `category_name` pada transaksi).
+README ini boleh diperbarui lagi untuk hal yang belum dikunci (mis. satu vs dua baris persistensi transfer, aturan nama duplikat saat unarchive, snapshot `category_name` pada transaksi).
