@@ -9,14 +9,22 @@ import (
 	"syscall"
 	"time"
 
+	"finku/backend/internal/account"
 	"finku/backend/internal/auth"
+	"finku/backend/internal/budget"
 	"finku/backend/internal/cache"
+	"finku/backend/internal/category"
 	"finku/backend/internal/config"
 	"finku/backend/internal/db"
 	"finku/backend/internal/db/sqlc"
+	"finku/backend/internal/goal"
 	"finku/backend/internal/httpx"
 	"finku/backend/internal/middleware"
+	"finku/backend/internal/preferences"
+	"finku/backend/internal/summary"
 	"finku/backend/internal/token"
+	"finku/backend/internal/transaction"
+	"finku/backend/internal/wallet"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -61,6 +69,22 @@ func main() {
 	authMw := middleware.NewAuth(access, rdb)
 	rateMw := middleware.NewRateLimiter(rdb)
 
+	walletSvc := wallet.NewService(q)
+	walletH := wallet.NewHandler(walletSvc)
+	catSvc := category.NewService(q)
+	catH := category.NewHandler(catSvc)
+	txSvc := transaction.NewService(q)
+	txH := transaction.NewHandler(txSvc)
+	budSvc := budget.NewService(q)
+	budH := budget.NewHandler(budSvc)
+	goalSvc := goal.NewService(q)
+	goalH := goal.NewHandler(goalSvc)
+	sumSvc := summary.NewService(q)
+	sumH := summary.NewHandler(sumSvc)
+	prefSvc := preferences.NewService(q)
+	prefH := preferences.NewHandler(prefSvc)
+	acctH := account.NewHandler(q)
+
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID, chimw.RealIP, chimw.Recoverer)
 	r.Use(func(next http.Handler) http.Handler {
@@ -96,12 +120,53 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authMw.Require)
 			r.Get("/me", h.Me)
+			r.Patch("/profile", h.PatchProfile)
 			r.With(rateMw.Limit).Patch("/password", h.UpdatePassword)
 			r.With(rateMw.Limit).Patch("/username", h.UpdateUsername)
 			r.Get("/username/suggest", h.SuggestUsername)
 			r.Get("/identities", h.ListIdentities)
 			r.Delete("/identities/{provider}", h.UnlinkIdentity)
 			r.Post("/logout", h.Logout)
+		})
+	})
+
+	r.Route("/api", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(authMw.Require)
+			r.Get("/wallets", walletH.List)
+			r.Post("/wallets", walletH.Create)
+			r.Patch("/wallets/{id}", walletH.Update)
+			r.Delete("/wallets/{id}", walletH.Archive)
+
+			r.Get("/categories", catH.List)
+			r.Post("/categories", catH.Create)
+			r.Patch("/categories/{id}", catH.Update)
+			r.Post("/categories/{id}/archive", catH.Archive)
+			r.Post("/categories/{id}/unarchive", catH.Unarchive)
+
+			r.Get("/transactions", txH.List)
+			r.Post("/transactions", txH.Create)
+			r.Patch("/transactions/{id}", txH.Update)
+			r.Delete("/transactions/{id}", txH.Delete)
+
+			r.Get("/budgets", budH.List)
+			r.Post("/budgets", budH.Create)
+			r.Patch("/budgets/{id}", budH.Update)
+			r.Delete("/budgets/{id}", budH.Delete)
+
+			r.Get("/goals", goalH.List)
+			r.Post("/goals", goalH.Create)
+			r.Patch("/goals/{id}", goalH.Update)
+			r.Post("/goals/{id}/contribute", goalH.Contribute)
+			r.Delete("/goals/{id}", goalH.Delete)
+
+			r.Get("/summary/dashboard", sumH.Dashboard)
+			r.Get("/summary/stats", sumH.Stats)
+
+			r.Get("/preferences", prefH.Get)
+			r.Patch("/preferences", prefH.Patch)
+
+			r.Post("/account/reset-data", acctH.ResetData)
 		})
 	})
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthApiError, useAuth } from "@/store/auth";
 import { motion } from "framer-motion";
@@ -16,6 +16,8 @@ import BlobBackground from "@/components/BlobBackground";
 import { isGoogleEnabled, signInWithGoogle } from "@/lib/oauth";
 import { toast } from "sonner";
 
+const REMEMBER_KEY = "finku-remember-identifier";
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const login = useAuth((s) => s.login);
@@ -24,12 +26,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
   const [form, setForm] = useState({ identifier: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(() =>
+    typeof window !== "undefined" ? !!window.localStorage.getItem(REMEMBER_KEY) : false,
+  );
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(REMEMBER_KEY);
+    if (saved) setForm((f) => ({ ...f, identifier: saved }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await login(form.identifier, form.password);
+      if (rememberMe) {
+        window.localStorage.setItem(REMEMBER_KEY, form.identifier.trim());
+      } else {
+        window.localStorage.removeItem(REMEMBER_KEY);
+      }
       toast.success("Berhasil masuk. Yuk lanjut!");
       navigate("/dashboard", { replace: true });
     } catch (err) {
@@ -171,12 +186,15 @@ export default function LoginPage() {
                   <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
                     Password
                   </label>
-                  <a
-                    href="#"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toast.message("Reset password via email belum diaktifkan — hubungi support atau gunakan Google.")
+                    }
                     className="text-xs text-neon-pink hover:text-neon-purple font-semibold transition-colors"
                   >
                     Lupa password?
-                  </a>
+                  </button>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -206,7 +224,12 @@ export default function LoginPage() {
               </div>
 
               <label className="flex items-center gap-2.5 cursor-pointer group select-none">
-                <input type="checkbox" className="peer sr-only" />
+                <input
+                  type="checkbox"
+                  className="peer sr-only"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
                 <span className="w-5 h-5 rounded-lg border-2 border-white/20 grid place-items-center peer-checked:bg-gradient-neon peer-checked:border-transparent transition-all">
                   <svg
                     className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100"

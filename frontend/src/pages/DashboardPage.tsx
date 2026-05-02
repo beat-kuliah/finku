@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -17,76 +18,114 @@ import {
   Tooltip,
 } from "recharts";
 import AppShell from "@/components/AppShell";
+import { fetchDashboard, type DashboardPayload } from "@/api/summary";
+import { useAuth } from "@/store/auth";
+import { useDataVersion } from "@/store/dataVersion";
+import { formatIDR } from "@/lib/format";
 
-const trendData = [
-  { day: "Sen", amount: 180000 },
-  { day: "Sel", amount: 140000 },
-  { day: "Rab", amount: 220000 },
-  { day: "Kam", amount: 125000 },
-  { day: "Jum", amount: 260000 },
-  { day: "Sab", amount: 310000 },
-  { day: "Min", amount: 170000 },
-];
-
-const categoryData = [
-  { name: "Makan", value: 34, color: "#00f0ff" },
-  { name: "Transport", value: 21, color: "#2563eb" },
-  { name: "Shopping", value: 16, color: "#1d4ed8" },
-  { name: "Hiburan", value: 14, color: "#38bdf8" },
-  { name: "Lainnya", value: 15, color: "#7dd3fc" },
-];
-
-const budgets = [
-  { emoji: "🍔", name: "Makan", spent: 820000, limit: 1200000 },
-  { emoji: "🛵", name: "Transport", spent: 410000, limit: 600000 },
-  { emoji: "🛍️", name: "Shopping", spent: 930000, limit: 800000 },
-];
-
-const latestTx = [
-  { emoji: "☕", title: "Kopi Kenangan", category: "Jajan", amount: -38000 },
-  { emoji: "💰", title: "Salary", category: "Income", amount: 5000000 },
-  { emoji: "🍜", title: "Mie Gacoan", category: "Makan", amount: -47000 },
-  { emoji: "🛵", title: "GoRide", category: "Transport", amount: -22000 },
-];
+const COLORS = ["#00f0ff", "#2563eb", "#1d4ed8", "#38bdf8", "#7dd3fc", "#a5f3fc", "#bae6fd"];
 
 export default function DashboardPage() {
+  const user = useAuth((s) => s.user);
+  const version = useDataVersion((s) => s.version);
+  const [data, setData] = useState<DashboardPayload | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const d = await fetchDashboard();
+        if (!cancelled) {
+          setData(d);
+          setErr(null);
+        }
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : "Gagal memuat");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [version]);
+
+  const trendData = useMemo(() => {
+    if (!data?.dailyTrend?.length) return [];
+    return data.dailyTrend.map((row) => ({
+      day: new Date(row.date + "T12:00:00").toLocaleDateString("id-ID", { weekday: "short" }),
+      amount: row.expense,
+    }));
+  }, [data]);
+
+  const categoryData = useMemo(() => {
+    if (!data?.categoryBreakdown?.length) return [];
+    const total = data.categoryBreakdown.reduce((s, c) => s + c.value, 0) || 1;
+    return data.categoryBreakdown.map((c, i) => ({
+      name: c.name,
+      value: Math.round((c.value / total) * 100),
+      raw: c.value,
+      color: COLORS[i % COLORS.length],
+    }));
+  }, [data]);
+
+  const budgets = data?.budgets ?? [];
+  const latestTx = data?.latestTransactions ?? [];
+
+  const subtitle = user?.username ? `Halo, @${user.username}` : `Halo, ${user?.name ?? "FinKu"} 👋`;
+  const today = new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  const sisaBudget =
+    data != null
+      ? Math.max(
+          0,
+          budgets.reduce((s, b) => s + Math.max(0, b.limitAmount - b.spent), 0),
+        )
+      : 0;
+
   return (
-    <AppShell
-      activeSection="dashboard"
-      desktopTitle="Welcome back!"
-      desktopSubtitle="Halo, Kania 👋"
-    >
+    <AppShell activeSection="dashboard" desktopTitle="Welcome back!" desktopSubtitle={subtitle}>
+      {err && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {err}
+        </div>
+      )}
       <section className="card !p-6 md:!p-7 bg-gradient-tiktok bg-[length:200%_200%] animate-gradient-x">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">
-              Saldo bulan ini
-            </p>
+            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">Total saldo dompet</p>
             <h1 className="font-display text-3xl md:text-4xl font-extrabold mt-1">
-              Rp 3.240.500
+              {data ? formatIDR(data.totalBalance) : "…"}
             </h1>
-            <p className="text-sm text-white/80 mt-2">Kamis, 23 Apr 2026</p>
+            <p className="text-sm text-white/80 mt-2">{today}</p>
+            <Link to="/wallets" className="btn-ghost !px-0 text-sm mt-3 inline-flex">
+              Detail dompet
+            </Link>
           </div>
           <div className="chip !bg-white/20 !border-white/30 !text-white">
             <Flame className="w-3.5 h-3.5" />
-            7 hari streak catat transaksi
+            Ringkasan bulan berjalan
           </div>
         </div>
         <div className="grid sm:grid-cols-3 gap-3 mt-5">
           <StatMini
             icon={<ArrowUpRight className="w-4 h-4" />}
-            label="Income"
-            value="Rp 5.000.000"
+            label="Income (periode)"
+            value={data ? formatIDR(data.periodIncome) : "…"}
           />
           <StatMini
             icon={<ArrowDownRight className="w-4 h-4" />}
-            label="Expense"
-            value="Rp 1.759.500"
+            label="Expense (periode)"
+            value={data ? formatIDR(data.periodExpense) : "…"}
           />
           <StatMini
             icon={<Wallet className="w-4 h-4" />}
-            label="Sisa budget"
-            value="Rp 1.800.500"
+            label="Sisa budget (est.)"
+            value={data ? formatIDR(sisaBudget) : "…"}
           />
         </div>
       </section>
@@ -95,52 +134,61 @@ export default function DashboardPage() {
         <div className="card lg:col-span-2 !p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-bold text-xl">Trend Pengeluaran</h2>
-            <span className="chip">7 hari terakhir</span>
+            <span className="chip">Periode ini</span>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData} margin={{ left: 0, right: 8, top: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="areaGlow" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#00f0ff" stopOpacity={0.65} />
-                    <stop offset="100%" stopColor="#00f0ff" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis axisLine={false} tickLine={false} dataKey="day" stroke="#9fb5da" />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 16,
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(11, 18, 32, 0.9)",
-                    color: "#e6f7ff",
-                  }}
-                  formatter={(value: number) => [formatIDR(value), "Pengeluaran"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="amount"
-                  stroke="#00f0ff"
-                  strokeWidth={3}
-                  fill="url(#areaGlow)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ left: 0, right: 8, top: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="areaGlow" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#00f0ff" stopOpacity={0.65} />
+                      <stop offset="100%" stopColor="#00f0ff" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis axisLine={false} tickLine={false} dataKey="day" stroke="#9fb5da" />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 16,
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "rgba(11, 18, 32, 0.9)",
+                      color: "#e6f7ff",
+                    }}
+                    formatter={(value: number) => [formatIDR(value), "Pengeluaran"]}
+                  />
+                  <Area type="monotone" dataKey="amount" stroke="#00f0ff" strokeWidth={3} fill="url(#areaGlow)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-white/50 text-sm h-full flex items-center justify-center">Belum ada data pengeluaran.</p>
+            )}
           </div>
         </div>
 
         <div className="card !p-6">
           <h2 className="font-display font-bold text-xl">Kategori</h2>
-          <p className="text-white/60 text-sm mt-1">Porsi pengeluaran bulan ini</p>
+          <p className="text-white/60 text-sm mt-1">Porsi pengeluaran (periode)</p>
           <div className="h-48 mt-3">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={categoryData} dataKey="value" innerRadius={48} outerRadius={72} paddingAngle={4}>
-                  {categoryData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            {categoryData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={48}
+                    outerRadius={72}
+                    paddingAngle={4}
+                  >
+                    {categoryData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-white/50 text-sm text-center pt-16">Belum ada pengeluaran terkategori.</p>
+            )}
           </div>
           <div className="space-y-2 mt-2">
             {categoryData.map((item) => (
@@ -160,28 +208,32 @@ export default function DashboardPage() {
         <div className="card !p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-display font-bold text-xl">Budget Tracker</h2>
-            <Link to="/budget" className="btn-ghost !px-0 text-sm">Kelola</Link>
+            <Link to="/budget" className="btn-ghost !px-0 text-sm">
+              Kelola
+            </Link>
           </div>
           <div className="space-y-4 mt-4">
+            {budgets.length === 0 && <p className="text-white/50 text-sm">Belum ada budget.</p>}
             {budgets.map((item) => {
-              const pct = Math.min(100, Math.round((item.spent / item.limit) * 100));
-              const over = item.spent > item.limit;
+              const pct = item.limitAmount > 0 ? Math.min(100, Math.round((item.spent / item.limitAmount) * 100)) : 0;
+              const over = item.spent > item.limitAmount;
               return (
-                <div key={item.name} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{item.emoji}</span>
-                      <span className="font-semibold">{item.name}</span>
-                    </div>
-                    <span className={`text-xs font-semibold ${over ? "text-red-400" : "text-neon-lime"}`}>
-                      {pct}%
+                    <span className="font-semibold text-sm truncate">
+                      {item.categoryName ?? item.categoryId.slice(0, 8)}
                     </span>
+                    <span className={`text-xs font-semibold ${over ? "text-red-400" : "text-neon-lime"}`}>{pct}%</span>
                   </div>
                   <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                    <div className={`h-full rounded-full ${over ? "bg-red-500" : "bg-gradient-neon"}`} style={{ width: `${pct}%` }} />
+                    <div
+                      className={`h-full rounded-full ${over ? "bg-red-500" : "bg-gradient-neon"}`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                   <p className="text-xs text-white/60 mt-2">
-                    {formatIDR(item.spent)} / {formatIDR(item.limit)}
+                    {formatIDR(item.spent)} / {formatIDR(item.limitAmount)}
+                    {item.paused ? " · dijeda" : ""}
                   </p>
                 </div>
               );
@@ -193,34 +245,41 @@ export default function DashboardPage() {
           <div className="card !p-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-display font-bold text-xl">Transaksi Terbaru</h2>
-              <Link to="/transactions" className="btn-ghost !px-0 text-sm">Lihat semua</Link>
+              <Link to="/transactions" className="btn-ghost !px-0 text-sm">
+                Lihat semua
+              </Link>
             </div>
             <div className="space-y-2.5">
-              {latestTx.map((tx, idx) => (
-                <div key={`${tx.title}-${idx}`} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 grid place-items-center text-lg">
-                    {tx.emoji}
+              {latestTx.length === 0 && <p className="text-white/50 text-sm">Belum ada transaksi.</p>}
+              {latestTx.map((tx) => {
+                const isIncome = tx.kind === "income";
+                const isTransfer = tx.kind === "transfer";
+                const label = tx.description || (isTransfer ? "Transfer" : tx.category || tx.kind);
+                return (
+                  <div key={tx.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/10 grid place-items-center text-lg">
+                      {isTransfer ? "↔️" : isIncome ? "💰" : "📝"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{label}</p>
+                      <p className="text-xs text-white/50">{tx.kind}</p>
+                    </div>
+                    <p className={`text-sm font-bold ${isIncome ? "text-neon-lime" : "text-white"}`}>
+                      {isIncome ? "+" : isTransfer ? "" : "-"}
+                      {formatIDR(tx.amount, false)}
+                    </p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{tx.title}</p>
-                    <p className="text-xs text-white/50">{tx.category}</p>
-                  </div>
-                  <p className={`text-sm font-bold ${tx.amount > 0 ? "text-neon-lime" : "text-white"}`}>
-                    {tx.amount > 0 ? "+" : "-"}
-                    {formatIDR(Math.abs(tx.amount), false)}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           <div className="card !p-6 bg-gradient-cyber">
             <div className="chip !bg-white/20 !border-white/30 !text-white mb-3 w-fit">
-              <Sparkles className="w-3.5 h-3.5" /> Insight hari ini
+              <Sparkles className="w-3.5 h-3.5" /> Insight
             </div>
-            <p className="font-semibold text-lg leading-relaxed">
-              Kamu spending <span className="font-extrabold">38%</span> lebih banyak di weekend.
-              Kalau dipangkas 20%, goal laptop baru bisa lebih cepat <span className="font-extrabold">2 bulan</span>.
+            <p className="font-semibold text-lg leading-relaxed text-white/90">
+              Pantau budget per kategori di halaman Budget. Transfer antar dompet tidak memakan limit kategori.
             </p>
           </div>
         </div>
@@ -239,9 +298,4 @@ function StatMini({ icon, label, value }: { icon: React.ReactNode; label: string
       <p className="font-bold mt-1.5">{value}</p>
     </div>
   );
-}
-
-function formatIDR(amount: number, withPrefix = true) {
-  const value = amount.toLocaleString("id-ID");
-  return withPrefix ? `Rp ${value}` : value;
 }

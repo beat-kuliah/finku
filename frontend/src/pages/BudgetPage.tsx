@@ -1,79 +1,158 @@
-import { Plus, AlertTriangle, CircleCheckBig } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import * as budgetsApi from "@/api/budgets";
+import * as catApi from "@/api/categories";
+import { useDataVersion } from "@/store/dataVersion";
 
-const budgetItems = [
-  { emoji: "🍔", name: "Makan", spent: 820000, limit: 1200000 },
-  { emoji: "🛵", name: "Transport", spent: 410000, limit: 600000 },
-  { emoji: "🛍️", name: "Shopping", spent: 930000, limit: 800000 },
-  { emoji: "🎮", name: "Hiburan", spent: 250000, limit: 400000 },
-];
+const bumpData = () => useDataVersion.getState().bump();
+import { formatIDR } from "@/lib/format";
+import { toast } from "sonner";
 
 export default function BudgetPage() {
-  const totalSpent = budgetItems.reduce((sum, item) => sum + item.spent, 0);
-  const totalLimit = budgetItems.reduce((sum, item) => sum + item.limit, 0);
-  const totalPct = Math.round((totalSpent / totalLimit) * 100);
+  const version = useDataVersion((s) => s.version);
+  const [items, setItems] = useState<budgetsApi.Budget[]>([]);
+  const [cats, setCats] = useState<catApi.Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newCat, setNewCat] = useState("");
+  const [newLimit, setNewLimit] = useState("");
+
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const from = monthStart.toISOString().slice(0, 10);
+  const to = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [b, c] = await Promise.all([budgetsApi.listBudgets(from, to), catApi.listCategories(false)]);
+      setItems(b.budgets);
+      setCats(c.categories.filter((x) => x.kind === "expense"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memuat");
+    } finally {
+      setLoading(false);
+    }
+  }, [from, to]);
+
+  useEffect(() => {
+    void load();
+  }, [load, version]);
+
+  const totalLimit = items.reduce((s, b) => s + b.limitAmount, 0);
+  const totalSpent = items.reduce((s, b) => s + b.spent, 0);
+  const pct = totalLimit > 0 ? Math.min(100, Math.round((totalSpent / totalLimit) * 100)) : 0;
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const lim = Number(String(newLimit).replace(/\./g, ""));
+    if (!newCat || !Number.isFinite(lim) || lim <= 0) {
+      toast.error("Pilih kategori dan isi limit valid.");
+      return;
+    }
+    try {
+      await budgetsApi.createBudget({
+        categoryId: newCat,
+        periodAnchor: from,
+        limitAmount: lim,
+      });
+      toast.success("Budget ditambahkan.");
+      setShowAdd(false);
+      setNewLimit("");
+      bumpData();
+      void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal");
+    }
+  };
 
   return (
-    <AppShell activeSection="budget" desktopTitle="Budget planner" desktopSubtitle="Kontrol pengeluaran kamu">
-      <section className="card !p-6 md:!p-7 bg-gradient-cyber">
-        <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">Budget bulan ini</p>
-        <h1 className="font-display text-3xl md:text-4xl font-extrabold mt-1">
-          Rp {totalSpent.toLocaleString("id-ID")} / {totalLimit.toLocaleString("id-ID")}
-        </h1>
-        <div className="h-3 bg-white/20 rounded-full mt-4 overflow-hidden">
-          <div className="h-full bg-white rounded-full" style={{ width: `${Math.min(100, totalPct)}%` }} />
-        </div>
-        <p className="text-sm text-white/80 mt-2">{totalPct}% terpakai</p>
-      </section>
-
-      <section className="card !p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display font-bold text-2xl">Kategori Budget</h2>
-          <button className="btn-primary !py-2.5 !px-4 text-sm">
-            <Plus className="w-4 h-4" />
+    <AppShell activeSection="budget" desktopTitle="Budget" desktopSubtitle="Kontrol pengeluaran per kategori">
+      <section className="card !p-6 md:!p-7">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-white/60 font-semibold">Budget bulan ini</p>
+            <h1 className="font-display text-3xl font-extrabold mt-1">Progress vs limit</h1>
+          </div>
+          <button type="button" className="btn-primary !py-2.5 !px-4 text-sm" onClick={() => setShowAdd(true)}>
             Tambah Budget
           </button>
         </div>
+        <div className="mt-6">
+          <div className="flex items-center justify-between text-sm text-white/70 mb-2">
+            <span>Total terpakai</span>
+            <span className="font-semibold text-white">
+              {formatIDR(totalSpent)} / {formatIDR(totalLimit)}
+            </span>
+          </div>
+          <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-neon transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </section>
 
-        <div className="space-y-4">
-          {budgetItems.map((item) => {
-            const pct = Math.round((item.spent / item.limit) * 100);
-            const over = item.spent > item.limit;
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <form
+            onSubmit={(e) => void handleAdd(e)}
+            className="card !p-6 max-w-md w-full space-y-4 border border-white/15"
+          >
+            <h3 className="font-display font-bold text-lg">Budget baru</h3>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">Kategori pengeluaran</label>
+              <select className="input" value={newCat} onChange={(e) => setNewCat(e.target.value)} required>
+                <option value="">— Pilih —</option>
+                {cats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon ? `${c.icon} ` : ""}
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">Limit (IDR)</label>
+              <input className="input" value={newLimit} onChange={(e) => setNewLimit(e.target.value)} required />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
+                Batal
+              </button>
+              <button type="submit" className="btn-primary">
+                Simpan
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
+      <section className="space-y-4">
+        {loading && <p className="text-white/50 text-sm">Memuat…</p>}
+        {!loading && items.length === 0 && <p className="text-white/50 text-sm">Belum ada budget untuk periode ini.</p>}
+        {!loading &&
+          items.map((item) => {
+            const p = item.limitAmount > 0 ? Math.min(100, Math.round((item.spent / item.limitAmount) * 100)) : 0;
+            const over = item.spent > item.limitAmount;
             return (
-              <div key={item.name} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{item.emoji}</span>
-                    <span className="font-semibold">{item.name}</span>
-                  </div>
-                  <span className={`text-xs font-semibold ${over ? "text-red-300" : "text-neon-lime"}`}>
-                    {pct}%
-                  </span>
+              <div key={item.id} className="card !p-5">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="font-semibold">{item.categoryName ?? item.categoryId}</span>
+                  <span className={`text-xs font-semibold ${over ? "text-red-400" : "text-neon-lime"}`}>{p}%</span>
                 </div>
-
                 <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                  <div className={`h-full rounded-full ${over ? "bg-red-500" : "bg-gradient-neon"}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                  <div
+                    className={`h-full rounded-full ${over ? "bg-red-500" : "bg-gradient-neon"}`}
+                    style={{ width: `${p}%` }}
+                  />
                 </div>
-
-                <div className="flex items-center justify-between mt-3 text-xs">
-                  <span className="text-white/60">
-                    Rp {item.spent.toLocaleString("id-ID")} / Rp {item.limit.toLocaleString("id-ID")}
-                  </span>
-                  {over ? (
-                    <span className="text-red-300 flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Over budget
-                    </span>
-                  ) : (
-                    <span className="text-neon-lime flex items-center gap-1">
-                      <CircleCheckBig className="w-3.5 h-3.5" /> Aman
-                    </span>
-                  )}
-                </div>
+                <p className="text-xs text-white/60 mt-2">
+                  {formatIDR(item.spent)} / {formatIDR(item.limitAmount)}
+                  {item.paused ? " · dijeda (kategori diarsipkan)" : ""}
+                </p>
               </div>
             );
           })}
-        </div>
       </section>
     </AppShell>
   );

@@ -161,7 +161,7 @@ export default function LandingPage() {
                 <Zap className="w-5 h-5" />
                 Mulai Gratis Sekarang
               </Link>
-              <Link to="/dashboard" className="btn-secondary !px-7 !py-4 text-base">
+              <Link to="/login" className="btn-secondary !px-7 !py-4 text-base">
                 <Play className="w-4 h-4 fill-white" />
                 Liat Demo
               </Link>
@@ -378,9 +378,15 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-1 text-sm">
-            <a href="#" className="btn-ghost text-xs">Privacy</a>
-            <a href="#" className="btn-ghost text-xs">Terms</a>
-            <a href="#" className="btn-ghost text-xs">Support</a>
+            <Link to="/login" className="btn-ghost text-xs">
+              Privacy
+            </Link>
+            <Link to="/login" className="btn-ghost text-xs">
+              Terms
+            </Link>
+            <a href="mailto:support@finku.app" className="btn-ghost text-xs">
+              Support
+            </a>
           </div>
         </div>
       </footer>

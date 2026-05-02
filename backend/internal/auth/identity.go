@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"finku/backend/internal/db/sqlc"
+	"finku/backend/internal/finance"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -95,6 +96,11 @@ func (s *Service) LoginWithGoogle(ctx context.Context, idToken string) (AuthResp
 	res, err := s.resolveIdentity(ctx, ProviderGoogle, claims)
 	if err != nil {
 		return AuthResponse{}, "", err
+	}
+	if res.created {
+		if err := finance.EnsureNewUserDefaults(ctx, s.q, res.user.ID); err != nil {
+			return AuthResponse{}, "", err
+		}
 	}
 	return s.issueSession(ctx, res.user)
 }

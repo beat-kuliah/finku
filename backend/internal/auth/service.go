@@ -11,6 +11,7 @@ import (
 	"finku/backend/internal/cache"
 	"finku/backend/internal/config"
 	"finku/backend/internal/db/sqlc"
+	"finku/backend/internal/finance"
 	"finku/backend/internal/token"
 
 	"github.com/go-playground/validator/v10"
@@ -155,6 +156,9 @@ func (s *Service) Register(ctx context.Context, in RegisterRequest) (AuthRespons
 	}
 	emailPtr := email
 	if _, err := s.q.InsertIdentity(ctx, u.ID, "password", nil, &emailPtr); err != nil {
+		return AuthResponse{}, "", err
+	}
+	if err := finance.EnsureNewUserDefaults(ctx, s.q, u.ID); err != nil {
 		return AuthResponse{}, "", err
 	}
 	return s.issueSession(ctx, u)

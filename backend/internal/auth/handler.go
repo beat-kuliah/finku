@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 
@@ -199,11 +198,25 @@ func (h *Handler) UnlinkIdentity(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
 }
 
-func writeSvcErr(w http.ResponseWriter, err error) {
-	var se *StatusError
-	if errors.As(err, &se) {
-		httpx.Error(w, se.Status, se.Code, se.Message)
+func (h *Handler) PatchProfile(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
 		return
 	}
-	httpx.Error(w, http.StatusInternalServerError, "INTERNAL", "Something went wrong.")
+	var in PatchProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
+		return
+	}
+	dto, err := h.service.UpdateProfile(r.Context(), uid, in)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
+}
+
+func writeSvcErr(w http.ResponseWriter, err error) {
+	httpx.WriteServiceError(w, err)
 }

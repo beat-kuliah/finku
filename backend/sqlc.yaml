@@ -4,6 +4,13 @@ sql:
     queries: "queries/"
     schema:
       - "migrations/000001_create_users.up.sql"
+      - "migrations/000002_username_and_identities.up.sql"
+      - "migrations/000003_wallets.up.sql"
+      - "migrations/000004_categories.up.sql"
+      - "migrations/000005_transactions.up.sql"
+      - "migrations/000006_budgets.up.sql"
+      - "migrations/000007_goals.up.sql"
+      - "migrations/000008_user_preferences.up.sql"
     gen:
       go:
         package: "sqlc"

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { apiUrl, bindOnRefreshed, bindTokenGetter } from "@/lib/api";
+import { apiJson, apiUrl, bindOnRefreshed, bindTokenGetter } from "@/lib/api";
 
 export type AuthUser = {
   id: string;
@@ -42,6 +42,11 @@ type AuthState = {
   updatePassword: (input: UpdatePasswordInput) => Promise<AuthUser>;
   fetchUsernameSuggestion: () => Promise<string>;
   unlinkProvider: (provider: string) => Promise<AuthUser>;
+  patchProfile: (body: {
+    monthlyIncome?: number | null;
+    payday?: number | null;
+    currency?: string;
+  }) => Promise<AuthUser>;
 };
 
 export class AuthApiError extends Error {
@@ -218,6 +223,16 @@ export const useAuth = create<AuthState>((set, get) => ({
     });
     if (!res.ok) throw await readError(res, "Gagal melepas akun");
     const data = (await res.json()) as { user: AuthUser };
+    set({ user: data.user });
+    return data.user;
+  },
+
+  patchProfile: async (body) => {
+    const data = await apiJson<{ user: AuthUser }>(`/auth/profile`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     set({ user: data.user });
     return data.user;
   },
