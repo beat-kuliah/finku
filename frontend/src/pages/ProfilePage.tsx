@@ -21,6 +21,10 @@ import { useTheme } from "@/lib/theme";
 import { AuthApiError, useAuth } from "@/store/auth";
 import { isGoogleEnabled, signInWithGoogle } from "@/lib/oauth";
 import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
+import * as prefApi from "@/api/preferences";
+import * as catApi from "@/api/categories";
+import * as accountApi from "@/api/account";
 
 const PROVIDER_LABELS: Record<string, string> = {
   password: "Email & Password",
@@ -28,12 +32,13 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const { isDarkMode, toggleDarkMode } = useTheme();
+  const { isDarkMode, toggleDarkMode, setTheme } = useTheme();
   const user = useAuth((s) => s.user);
   const setUsername = useAuth((s) => s.setUsername);
   const updatePassword = useAuth((s) => s.updatePassword);
   const unlinkProvider = useAuth((s) => s.unlinkProvider);
   const loginWithGoogle = useAuth((s) => s.loginWithGoogle);
+  const patchProfile = useAuth((s) => s.patchProfile);
 
   const [usernameDraft, setUsernameDraft] = useState(user?.username ?? "");
   const [usernameSaving, setUsernameSaving] = useState(false);
@@ -54,10 +59,65 @@ export default function ProfilePage() {
     weeklyReport: false,
     biometric: false,
   });
+  const [fin, setFin] = useState({
+    monthlyIncome: "" as string,
+    payday: "" as string,
+    currency: "IDR",
+  });
+  const [prefsLoading, setPrefsLoading] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [catsActive, setCatsActive] = useState<catApi.Category[]>([]);
+  const [catsArchived, setCatsArchived] = useState<catApi.Category[]>([]);
+  const [catTab, setCatTab] = useState<"active" | "archived">("active");
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatKind, setNewCatKind] = useState<"income" | "expense">("expense");
 
   useEffect(() => {
     setUsernameDraft(user?.username ?? "");
   }, [user?.username]);
+
+  useEffect(() => {
+    if (!user) return;
+    setFin({
+      monthlyIncome: user.monthlyIncome != null ? String(user.monthlyIncome) : "",
+      payday: user.payday != null ? String(user.payday) : "",
+      currency: user.currency || "IDR",
+    });
+  }, [user?.monthlyIncome, user?.payday, user?.currency, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let c = false;
+    void (async () => {
+      setPrefsLoading(true);
+      try {
+        const [p, ca, cz] = await Promise.all([
+          prefApi.getPreferences(),
+          catApi.listCategories(false),
+          catApi.listCategories(true),
+        ]);
+        if (c) return;
+        setPrefs({
+          pushBudgetWarning: p.preferences.notifyBudgetWarning,
+          pushReminder: p.preferences.notifyReminder,
+          weeklyReport: p.preferences.notifyWeeklyReport,
+          biometric: window.localStorage.getItem("finku-biometric") === "1",
+        });
+        if (p.preferences.theme === "dark" || p.preferences.theme === "light") {
+          setTheme(p.preferences.theme);
+        }
+        setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+        setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+      } catch {
+        /* ignore */
+      } finally {
+        if (!c) setPrefsLoading(false);
+      }
+    })();
+    return () => {
+      c = true;
+    };
+  }, [user, setTheme]);
 
   if (!user) {
     return (
@@ -123,6 +183,37 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveAll = async () => {
+    setSaveBusy(true);
+    try {
+      const mi = fin.monthlyIncome.trim() === "" ? null : Number(fin.monthlyIncome.replace(/\./g, ""));
+      const pd = fin.payday.trim() === "" ? null : Number(fin.payday);
+      await patchProfile({
+        monthlyIncome: mi != null && Number.isFinite(mi) ? mi : null,
+        payday: pd != null && Number.isFinite(pd) ? Math.round(pd) : null,
+        currency: fin.currency.trim() || undefined,
+      });
+      await prefApi.patchPreferences({
+        notifyBudgetWarning: prefs.pushBudgetWarning,
+        notifyReminder: prefs.pushReminder,
+        notifyWeeklyReport: prefs.weeklyReport,
+        theme: isDarkMode ? "dark" : "light",
+      });
+      window.localStorage.setItem("finku-biometric", prefs.biometric ? "1" : "0");
+      toast.success("Preferensi tersimpan.");
+    } catch (err) {
+      toast.error(
+        err instanceof AuthApiError || err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Gagal menyimpan",
+      );
+    } finally {
+      setSaveBusy(false);
+    }
+  };
+
   const handleLinkGoogle = async () => {
     setIdentityBusy("google");
     try {
@@ -144,13 +235,13 @@ export default function ProfilePage() {
       desktopSubtitle="Akun kamu"
       rightAction={
         <button
-          onClick={() =>
-            toast.info("Preferensi finansial belum tersinkron (mock).")
-          }
-          className="btn-primary !px-4 !py-2 text-sm"
+          type="button"
+          disabled={saveBusy || prefsLoading}
+          onClick={() => void handleSaveAll()}
+          className="btn-primary !px-4 !py-2 text-sm disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
-          Simpan
+          {saveBusy ? "Menyimpan…" : "Simpan"}
         </button>
       }
     >
@@ -329,13 +420,142 @@ export default function ProfilePage() {
             <Wallet className="w-4 h-4 text-neon-pink" />
             <h2 className="font-display font-bold text-xl">Preferensi Finansial</h2>
           </div>
-          <p className="text-xs text-white/60">
-            Income, payday, dan currency akan tersinkron di update berikutnya.
-          </p>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-            Currency: <span className="font-semibold text-white">{user.currency}</span>
+          <p className="text-xs text-white/60">Disimpan lewat tombol Simpan di header.</p>
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
+              Pendapatan bulanan (IDR)
+            </label>
+            <input
+              className="input"
+              value={fin.monthlyIncome}
+              onChange={(e) => setFin((s) => ({ ...s, monthlyIncome: e.target.value }))}
+              placeholder="Opsional"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
+              Payday (1–31)
+            </label>
+            <input
+              className="input"
+              value={fin.payday}
+              onChange={(e) => setFin((s) => ({ ...s, payday: e.target.value }))}
+              placeholder="Opsional"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">Currency</label>
+            <input
+              className="input"
+              value={fin.currency}
+              onChange={(e) => setFin((s) => ({ ...s, currency: e.target.value.toUpperCase().slice(0, 3) }))}
+              maxLength={3}
+            />
           </div>
         </div>
+      </section>
+
+      <section className="card !p-6 space-y-4">
+        <h2 className="font-display font-bold text-xl">Kategori</h2>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className={`btn-secondary !py-1.5 !px-3 text-xs ${catTab === "active" ? "ring-1 ring-neon-cyan" : ""}`}
+            onClick={() => setCatTab("active")}
+          >
+            Aktif
+          </button>
+          <button
+            type="button"
+            className={`btn-secondary !py-1.5 !px-3 text-xs ${catTab === "archived" ? "ring-1 ring-neon-cyan" : ""}`}
+            onClick={() => setCatTab("archived")}
+          >
+            Diarsipkan
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 items-end">
+          <input
+            className="input flex-1 min-w-[140px]"
+            placeholder="Nama kategori"
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+          />
+          <select
+            className="input !w-auto"
+            value={newCatKind}
+            onChange={(e) => setNewCatKind(e.target.value as "income" | "expense")}
+          >
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+          <button
+            type="button"
+            className="btn-primary !py-2 !px-3 text-sm"
+            onClick={async () => {
+              const n = newCatName.trim();
+              if (!n) return;
+              try {
+                await catApi.createCategory({ name: n, kind: newCatKind });
+                setNewCatName("");
+                const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
+                setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+                setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+                toast.success("Kategori ditambahkan.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal");
+              }
+            }}
+          >
+            Tambah
+          </button>
+        </div>
+        <ul className="space-y-2 text-sm max-h-56 overflow-y-auto">
+          {(catTab === "active" ? catsActive : catsArchived).map((c) => (
+            <li key={c.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+              <span>
+                {c.icon ? `${c.icon} ` : ""}
+                {c.name} <span className="text-white/50">({c.kind})</span>
+              </span>
+              {catTab === "active" ? (
+                <button
+                  type="button"
+                  className="text-xs text-amber-300 hover:underline"
+                  onClick={async () => {
+                    try {
+                      await catApi.archiveCategory(c.id);
+                      const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
+                      setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+                      setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+                      toast.success("Kategori diarsipkan.");
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Gagal");
+                    }
+                  }}
+                >
+                  Arsipkan
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="text-xs text-neon-lime hover:underline"
+                  onClick={async () => {
+                    try {
+                      await catApi.unarchiveCategory(c.id);
+                      const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
+                      setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+                      setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+                      toast.success("Kategori dipulihkan.");
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Gagal");
+                    }
+                  }}
+                >
+                  Batalkan arsip
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="grid lg:grid-cols-2 gap-5">
@@ -391,7 +611,25 @@ export default function ProfilePage() {
             <p className="text-xs text-red-200/80 mt-1">
               Reset semua data transaksi dan budget (aksi permanen).
             </p>
-            <button className="mt-3 px-3 py-2 rounded-xl text-sm font-semibold border border-red-400/40 text-red-200 hover:bg-red-500/20 transition-colors">
+            <button
+              type="button"
+              className="mt-3 px-3 py-2 rounded-xl text-sm font-semibold border border-red-400/40 text-red-200 hover:bg-red-500/20 transition-colors"
+              onClick={async () => {
+                if (!confirm("Hapus semua transaksi, budget, goals, kategori & dompet lalu buat ulang default?")) return;
+                try {
+                  await accountApi.resetFinancialData();
+                  toast.success("Data finansial direset.");
+                  const [ca, cz] = await Promise.all([
+                    catApi.listCategories(false),
+                    catApi.listCategories(true),
+                  ]);
+                  setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+                  setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Gagal reset");
+                }
+              }}
+            >
               Reset Data
             </button>
           </div>

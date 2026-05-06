@@ -54,7 +54,8 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   const skipRefresh =
     path.includes("/auth/refresh") ||
     path.includes("/auth/login") ||
-    path.includes("/auth/register");
+    path.includes("/auth/register") ||
+    path.includes("/auth/oauth/google");
 
   const doFetch = () =>
     fetch(url, {
@@ -74,4 +75,28 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     }
   }
   return res;
+}
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+type ApiErrBody = { error?: { code?: string; message?: string } };
+
+export async function readApiError(res: Response): Promise<ApiError> {
+  const body = (await res.json().catch(() => ({}))) as ApiErrBody;
+  return new ApiError(body.error?.message ?? "Request failed", res.status, body.error?.code);
+}
+
+export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await apiFetch(path, init);
+  if (!res.ok) throw await readApiError(res);
+  return (await res.json()) as T;
 }

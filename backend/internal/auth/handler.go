@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 
@@ -30,10 +29,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, refreshJTI, err := h.service.Register(r.Context(), in)
 	if err != nil {
+		auditLog(r, "register", "failure", in.Email, "reason", err.Error())
 		writeSvcErr(w, err)
 		return
 	}
 	setRefreshCookie(w, h.cfg, refreshJTI)
+	auditLog(r, "register", "success", in.Email)
 	httpx.JSON(w, http.StatusCreated, resp)
 }
 
@@ -45,10 +46,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, refreshJTI, err := h.service.Login(r.Context(), in)
 	if err != nil {
+		auditLog(r, "login", "failure", in.Identifier, "reason", err.Error())
 		writeSvcErr(w, err)
 		return
 	}
 	setRefreshCookie(w, h.cfg, refreshJTI)
+	auditLog(r, "login", "success", in.Identifier)
 	httpx.JSON(w, http.StatusOK, resp)
 }
 
@@ -61,6 +64,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	resp, newJTI, err := h.service.Refresh(r.Context(), refreshJTI)
 	if err != nil {
 		clearRefreshCookie(w, h.cfg)
+		auditLog(r, "refresh", "failure", "", "reason", err.Error())
 		writeSvcErr(w, err)
 		return
 	}
@@ -96,10 +100,12 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		refreshJTI = strings.TrimSpace(c.Value)
 	}
 	if err := h.service.Logout(r.Context(), uid, jti, exp, refreshJTI); err != nil {
+		auditLog(r, "logout", "failure", "", "user_id", uid.String(), "reason", err.Error())
 		httpx.Error(w, http.StatusInternalServerError, "INTERNAL", "Something went wrong.")
 		return
 	}
 	clearRefreshCookie(w, h.cfg)
+	auditLog(r, "logout", "success", "", "user_id", uid.String())
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -116,9 +122,11 @@ func (h *Handler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	dto, err := h.service.UpdatePassword(r.Context(), uid, in)
 	if err != nil {
+		auditLog(r, "password_update", "failure", "", "user_id", uid.String(), "reason", err.Error())
 		writeSvcErr(w, err)
 		return
 	}
+	auditLog(r, "password_update", "success", "", "user_id", uid.String())
 	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
 }
 
@@ -163,10 +171,16 @@ func (h *Handler) OAuthGoogle(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, refreshJTI, err := h.service.LoginWithGoogle(r.Context(), in.IDToken)
 	if err != nil {
+		auditLog(r, "oauth_google", "failure", "", "reason", err.Error())
 		writeSvcErr(w, err)
 		return
 	}
 	setRefreshCookie(w, h.cfg, refreshJTI)
+	identifier := ""
+	if resp.User.Email != "" {
+		identifier = resp.User.Email
+	}
+	auditLog(r, "oauth_google", "success", identifier)
 	httpx.JSON(w, http.StatusOK, resp)
 }
 
@@ -199,11 +213,25 @@ func (h *Handler) UnlinkIdentity(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
 }
 
-func writeSvcErr(w http.ResponseWriter, err error) {
-	var se *StatusError
-	if errors.As(err, &se) {
-		httpx.Error(w, se.Status, se.Code, se.Message)
+func (h *Handler) PatchProfile(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
 		return
 	}
-	httpx.Error(w, http.StatusInternalServerError, "INTERNAL", "Something went wrong.")
+	var in PatchProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
+		return
+	}
+	dto, err := h.service.UpdateProfile(r.Context(), uid, in)
+	if err != nil {
+		writeSvcErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"user": dto})
+}
+
+func writeSvcErr(w http.ResponseWriter, err error) {
+	httpx.WriteServiceError(w, err)
 }

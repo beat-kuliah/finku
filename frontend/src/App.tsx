@@ -11,6 +11,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 import BudgetPage from "./pages/BudgetPage";
 import StatsPage from "./pages/StatsPage";
 import GoalsPage from "./pages/GoalsPage";
+import WalletsPage from "./pages/WalletsPage";
 
 export default function App() {
   const { isDarkMode } = useTheme();
@@ -62,6 +63,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <GoalsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wallets"
+        element={
+          <ProtectedRoute>
+            <WalletsPage />
           </ProtectedRoute>
         }
       />

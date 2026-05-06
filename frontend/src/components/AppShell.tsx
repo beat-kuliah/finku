@@ -11,10 +11,15 @@ import {
   Goal,
   User,
   LogOut,
+  Wallet,
+  MoreHorizontal,
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import BlobBackground from "@/components/BlobBackground";
+import AddTransactionModal from "@/components/AddTransactionModal";
+import MoreSheet from "@/components/MoreSheet";
 import { useAuth } from "@/store/auth";
+import { useUIStore } from "@/store/ui";
 import { toast } from "sonner";
 
 type ActiveSection =
@@ -23,6 +28,7 @@ type ActiveSection =
   | "stats"
   | "budget"
   | "goals"
+  | "wallets"
   | "profile";
 
 type AppShellProps = {
@@ -32,6 +38,9 @@ type AppShellProps = {
   rightAction?: ReactNode;
   children: ReactNode;
 };
+
+/** Routes opened from the mobile "More" sheet — bottom bar shows this slot as active with the child page name. */
+const MORE_MOBILE_SECTIONS: readonly ActiveSection[] = ["stats", "goals", "profile"];
 
 const navItems: Array<{
   key: ActiveSection;
@@ -44,6 +53,7 @@ const navItems: Array<{
     { key: "stats", label: "Stats", to: "/stats", icon: <ChartPie className="w-4 h-4" /> },
     { key: "budget", label: "Budget", to: "/budget", icon: <PiggyBank className="w-4 h-4" /> },
     { key: "goals", label: "Goals", to: "/goals", icon: <Goal className="w-4 h-4" /> },
+    { key: "wallets", label: "Wallets", to: "/wallets", icon: <Wallet className="w-4 h-4" /> },
     { key: "profile", label: "Profile", to: "/profile", icon: <User className="w-4 h-4" /> },
   ];
 
@@ -56,9 +66,27 @@ export default function AppShell({
 }: AppShellProps) {
   const navigate = useNavigate();
   const logout = useAuth((s) => s.logout);
-  const mobileActive = activeSection === "stats" || activeSection === "goals" ? "dashboard" : activeSection;
+  const user = useAuth((s) => s.user);
+  const setAddTxOpen = useUIStore((s) => s.setAddTransactionOpen);
+  const setMoreSheetOpen = useUIStore((s) => s.setMoreSheetOpen);
+  const openAdd = () => setAddTxOpen(true);
+  const initial =
+    (user?.name?.trim()?.charAt(0) || user?.email?.charAt(0) || "?").toUpperCase();
+  const mobileActive = activeSection;
   const [mobileSelected, setMobileSelected] = useState<ActiveSection>(mobileActive);
   const navTimeoutRef = useRef<number | null>(null);
+
+  const moreSlotActive = MORE_MOBILE_SECTIONS.includes(activeSection);
+  const moreSlotLabel =
+    activeSection === "stats"
+      ? "Stats"
+      : activeSection === "goals"
+        ? "Goals"
+        : activeSection === "profile"
+          ? "Profile"
+          : "More";
+  /** Ikon slot More tetap ⋯ — affordance “menu”; nama halaman aktif cukup di label. */
+  const moreSlotIcon = <MoreHorizontal className="w-5 h-5" />;
 
   useEffect(() => {
     setMobileSelected(mobileActive);
@@ -137,11 +165,15 @@ export default function AppShell({
               <div className="flex items-center gap-2">
                 {rightAction ?? (
                   <>
-                    <button className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 grid place-items-center hover:bg-white/10 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => toast.message("Notifikasi: belum ada push — pengaturan ada di Profil.")}
+                      className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 grid place-items-center hover:bg-white/10 transition-colors"
+                    >
                       <Bell className="w-4 h-4" />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-gradient-neon grid place-items-center font-bold shadow-neon">
-                      K
+                    <div className="w-10 h-10 rounded-full bg-gradient-neon grid place-items-center font-bold shadow-neon text-sm">
+                      {initial}
                     </div>
                   </>
                 )}
@@ -155,41 +187,55 @@ export default function AppShell({
         </div>
       </div>
 
-      <button className="hidden md:grid fixed bottom-8 right-8 w-14 h-14 rounded-full bg-gradient-neon shadow-neon place-items-center animate-pulse-glow z-40">
+      <button
+        type="button"
+        onClick={openAdd}
+        className="grid fixed bottom-28 right-5 md:bottom-8 md:right-8 w-14 h-14 rounded-full bg-gradient-neon shadow-neon place-items-center animate-pulse-glow z-50"
+        aria-label="Tambah transaksi"
+      >
         <Plus className="w-6 h-6" />
       </button>
 
       <nav className="fixed bottom-5 inset-x-0 md:hidden z-40 px-4">
         <div className="mx-auto max-w-md">
-          <div className="h-[74px] rounded-[2rem] border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_20px_40px_-18px_rgba(0,0,0,0.7)] px-2.5 flex items-center justify-between">
+          <div className="min-h-[78px] py-1 rounded-[2rem] border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_20px_40px_-18px_rgba(0,0,0,0.7)] px-1.5 flex items-stretch justify-between gap-0.5">
             <BottomNavItem
-              icon={<House className="w-6 h-6" />}
+              icon={<House className="w-5 h-5" />}
               label="Home"
               active={mobileSelected === "dashboard"}
               onClick={() => handleMobileNav("dashboard", "/dashboard")}
             />
             <BottomNavItem
-              icon={<ReceiptText className="w-6 h-6" />}
+              icon={<ReceiptText className="w-5 h-5" />}
               label="Transactions"
               active={mobileSelected === "transactions"}
               onClick={() => handleMobileNav("transactions", "/transactions")}
             />
-            <BottomNavCenter />
             <BottomNavItem
-              icon={<PiggyBank className="w-6 h-6" />}
+              icon={<Wallet className="w-5 h-5" />}
+              label="Wallets"
+              active={mobileSelected === "wallets"}
+              onClick={() => handleMobileNav("wallets", "/wallets")}
+            />
+            <BottomNavItem
+              icon={<PiggyBank className="w-5 h-5" />}
               label="Budget"
               active={mobileSelected === "budget"}
               onClick={() => handleMobileNav("budget", "/budget")}
             />
             <BottomNavItem
-              icon={<User className="w-6 h-6" />}
-              label="Profile"
-              active={mobileSelected === "profile"}
-              onClick={() => handleMobileNav("profile", "/profile")}
+              icon={moreSlotIcon}
+              label={moreSlotLabel}
+              active={moreSlotActive}
+              ariaLabel={moreSlotActive ? `${moreSlotLabel}, buka menu lainnya` : "Lainnya"}
+              onClick={() => setMoreSheetOpen(true)}
             />
           </div>
         </div>
       </nav>
+
+      <AddTransactionModal />
+      <MoreSheet />
     </div>
   );
 }
@@ -198,20 +244,22 @@ function BottomNavItem({
   icon,
   label,
   active = false,
+  ariaLabel,
   onClick,
 }: {
   icon: ReactNode;
   label: string;
   active?: boolean;
+  ariaLabel?: string;
   onClick: () => void;
 }) {
-  const className = `h-14 rounded-[1.6rem] flex items-center justify-center gap-2.5 transition-all duration-200 ${active
-      ? "px-6 bg-[#171a21] border border-white/10 text-white"
-      : "w-12 text-white/80 hover:text-white"
+  const className = `min-h-[62px] rounded-[1.35rem] flex items-center justify-center transition-all duration-200 min-w-0 flex-1 ${active
+      ? "px-1.5 py-1 bg-[#171a21] border border-white/10 text-white"
+      : "px-1 text-white/80 hover:text-white"
     } relative overflow-hidden`;
 
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button type="button" onClick={onClick} className={className} aria-label={ariaLabel ?? label}>
       {active && (
         <motion.span
           layoutId="mobile-dock-active-indicator"
@@ -219,21 +267,16 @@ function BottomNavItem({
           className="absolute inset-0 rounded-[1.6rem] bg-[#171a21] border border-white/10"
         />
       )}
-      <span className="relative z-10 flex items-center gap-2.5">
+      <span
+        className={`relative z-10 flex max-w-full items-center justify-center gap-1 ${active ? "flex-col gap-0.5 px-0.5" : ""}`}
+      >
         {icon}
-        {active && <span className="text-sm font-semibold">{label}</span>}
+        {active && (
+          <span className="text-[9px] font-semibold leading-[1.15] text-center whitespace-normal break-words hyphens-none">
+            {label}
+          </span>
+        )}
       </span>
-    </button>
-  );
-}
-
-function BottomNavCenter() {
-  return (
-    <button
-      onClick={() => toast.info("Fitur tambah transaksi akan segera aktif ✨")}
-      className="w-12 h-12 rounded-2xl grid place-items-center text-white/90 hover:text-white"
-    >
-      <Plus className="w-7 h-7" />
     </button>
   );
 }

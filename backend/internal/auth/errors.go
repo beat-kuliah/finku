@@ -1,15 +1,10 @@
 package auth
 
-type StatusError struct {
-	Status  int
-	Code    string
-	Message string
-}
+import "finku/backend/internal/httpx"
 
-func (e *StatusError) Error() string {
-	return e.Message
-}
+// StatusError is an alias for shared HTTP service errors.
+type StatusError = httpx.ServiceError
 
-func statusErr(status int, code, msg string) *StatusError {
-	return &StatusError{Status: status, Code: code, Message: msg}
+func statusErr(status int, code, msg string) *httpx.ServiceError {
+	return httpx.SvcErr(status, code, msg)
 }

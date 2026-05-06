@@ -28,6 +28,13 @@ type OAuthRequest struct {
 	IDToken string `json:"idToken" validate:"required"`
 }
 
+// PatchProfileRequest updates optional financial fields on the user row.
+type PatchProfileRequest struct {
+	MonthlyIncome *int64  `json:"monthlyIncome"`
+	Payday        *int16  `json:"payday"`
+	Currency      *string `json:"currency"`
+}
+
 type AuthResponse struct {
 	User        UserDTO `json:"user"`
 	AccessToken string  `json:"accessToken"`
