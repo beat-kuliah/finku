@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -73,7 +73,6 @@ export default function AppShell({
   const initial =
     (user?.name?.trim()?.charAt(0) || user?.email?.charAt(0) || "?").toUpperCase();
   const mobileActive = activeSection;
-  const [mobileSelected, setMobileSelected] = useState<ActiveSection>(mobileActive);
   const navTimeoutRef = useRef<number | null>(null);
 
   const moreSlotActive = MORE_MOBILE_SECTIONS.includes(activeSection);
@@ -89,10 +88,6 @@ export default function AppShell({
   const moreSlotIcon = <MoreHorizontal className="w-5 h-5" />;
 
   useEffect(() => {
-    setMobileSelected(mobileActive);
-  }, [mobileActive]);
-
-  useEffect(() => {
     return () => {
       if (navTimeoutRef.current !== null) {
         window.clearTimeout(navTimeoutRef.current);
@@ -106,7 +101,7 @@ export default function AppShell({
   };
 
   const handleMobileNav = (key: ActiveSection, to: string) => {
-    if (mobileSelected === key && mobileActive === key) {
+    if (mobileActive === key) {
       return;
     }
 
@@ -114,7 +109,6 @@ export default function AppShell({
       window.clearTimeout(navTimeoutRef.current);
     }
 
-    setMobileSelected(key);
     navTimeoutRef.current = window.setTimeout(() => {
       navigate(to);
     }, 170);
@@ -202,25 +196,25 @@ export default function AppShell({
             <BottomNavItem
               icon={<House className="w-5 h-5" />}
               label="Home"
-              active={mobileSelected === "dashboard"}
+              active={mobileActive === "dashboard"}
               onClick={() => handleMobileNav("dashboard", "/dashboard")}
             />
             <BottomNavItem
               icon={<ReceiptText className="w-5 h-5" />}
               label="Transactions"
-              active={mobileSelected === "transactions"}
+              active={mobileActive === "transactions"}
               onClick={() => handleMobileNav("transactions", "/transactions")}
             />
             <BottomNavItem
               icon={<Wallet className="w-5 h-5" />}
               label="Wallets"
-              active={mobileSelected === "wallets"}
+              active={mobileActive === "wallets"}
               onClick={() => handleMobileNav("wallets", "/wallets")}
             />
             <BottomNavItem
               icon={<PiggyBank className="w-5 h-5" />}
               label="Budget"
-              active={mobileSelected === "budget"}
+              active={mobileActive === "budget"}
               onClick={() => handleMobileNav("budget", "/budget")}
             />
             <BottomNavItem

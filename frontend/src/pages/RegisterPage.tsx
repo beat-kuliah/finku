@@ -91,7 +91,7 @@ export default function RegisterPage() {
       await loginWithGoogle(idToken);
       toast.success("Logged in with Google successfully.");
       navigate("/dashboard", { replace: true });
-    } catch (err) {
+    } catch {
       toast.error("Google login failed.");
     } finally {
       setOauthLoading(null);

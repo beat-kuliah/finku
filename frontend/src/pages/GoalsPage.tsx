@@ -30,7 +30,10 @@ export default function GoalsPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [load, version]);
 
   const handleCreate = async (e: React.FormEvent) => {
