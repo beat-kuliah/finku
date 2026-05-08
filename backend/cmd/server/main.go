@@ -140,6 +140,11 @@ func main() {
 			r.Patch("/wallets/{id}", walletH.Update)
 			r.Delete("/wallets/{id}", walletH.Archive)
 
+			r.Get("/wallet-groups", walletH.ListGroups)
+			r.Post("/wallet-groups", walletH.CreateGroup)
+			r.Patch("/wallet-groups/{id}", walletH.UpdateGroup)
+			r.Delete("/wallet-groups/{id}", walletH.DeleteGroup)
+
 			r.Get("/categories", catH.List)
 			r.Post("/categories", catH.Create)
 			r.Patch("/categories/{id}", catH.Update)
