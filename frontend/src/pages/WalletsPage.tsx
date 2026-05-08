@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Wallet as WalletIcon } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import AddWalletModal from "@/components/AddWalletModal";
+import EditWalletModal from "@/components/EditWalletModal";
 import * as walletsApi from "@/api/wallets";
 import * as walletGroupsApi from "@/api/walletGroups";
 import { useDataVersion } from "@/store/dataVersion";
@@ -20,6 +21,7 @@ export default function WalletsPage() {
   const [groups, setGroups] = useState<walletGroupsApi.WalletGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editingWallet, setEditingWallet] = useState<walletsApi.Wallet | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupName, setEditingGroupName] = useState("");
 
@@ -131,23 +133,32 @@ export default function WalletsPage() {
         <p className="text-white/70 font-semibold mt-0.5">{formatIDR(w.balance)}</p>
       </div>
       {showArchive && !w.archivedAt && (
-        <button
-          type="button"
-          className="text-xs text-amber-300 hover:underline shrink-0"
-          onClick={async () => {
-            if (!confirm(`Arsipkan dompet "${w.name}"?`)) return;
-            try {
-              await walletsApi.archiveWallet(w.id);
-              bumpData();
-              toast.success("Dompet diarsipkan.");
-              void load();
-            } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Gagal");
-            }
-          }}
-        >
-          Arsipkan
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            className="text-xs text-white/70 hover:underline"
+            onClick={() => setEditingWallet(w)}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="text-xs text-amber-300 hover:underline"
+            onClick={async () => {
+              if (!confirm(`Arsipkan dompet "${w.name}"?`)) return;
+              try {
+                await walletsApi.archiveWallet(w.id);
+                bumpData();
+                toast.success("Dompet diarsipkan.");
+                void load();
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal");
+              }
+            }}
+          >
+            Arsipkan
+          </button>
+        </div>
       )}
       {!showArchive && w.archivedAt && (
         <span className="text-xs text-white/40 shrink-0">Diarsipkan</span>
@@ -310,6 +321,15 @@ export default function WalletsPage() {
         onClose={() => setAddModalOpen(false)}
         groups={sortedGroups}
         onCreated={() => {
+          void load();
+        }}
+      />
+      <EditWalletModal
+        open={!!editingWallet}
+        wallet={editingWallet}
+        groups={sortedGroups}
+        onClose={() => setEditingWallet(null)}
+        onSaved={() => {
           void load();
         }}
       />
