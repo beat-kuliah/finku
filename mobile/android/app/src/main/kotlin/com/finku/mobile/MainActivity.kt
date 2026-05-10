@@ -1,4 +1,4 @@
-package com.finku.mobile.finku_mobile
+package com.finku.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 

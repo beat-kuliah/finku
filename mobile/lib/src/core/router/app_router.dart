@@ -1,41 +1,121 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:finku_mobile/src/features/auth/domain/auth_state.dart';
-import 'package:finku_mobile/src/features/auth/presentation/pages/home_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/pages/login_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/pages/register_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/pages/splash_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
+import 'package:finku_mobile/src/features/budget/presentation/budget_page.dart';
+import 'package:finku_mobile/src/features/dashboard/presentation/dashboard_page.dart';
+import 'package:finku_mobile/src/features/goals/presentation/goals_page.dart';
+import 'package:finku_mobile/src/features/profile/presentation/profile_page.dart';
+import 'package:finku_mobile/src/features/shell/presentation/app_shell.dart';
+import 'package:finku_mobile/src/features/stats/presentation/stats_page.dart';
+import 'package:finku_mobile/src/features/transactions/presentation/transactions_page.dart';
+import 'package:finku_mobile/src/features/wallets/presentation/wallets_page.dart';
+
+/// Routes outside the shell (no bottom dock / header chrome).
+const _kAuthRoutes = <String>{'/splash', '/login', '/register'};
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
+    debugLogDiagnostics: kDebugMode,
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
-      GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return AppShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/dashboard',
+                builder: (context, state) => const DashboardPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/transactions',
+                builder: (context, state) => const TransactionsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/wallets',
+                builder: (context, state) => const WalletsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/budget',
+                builder: (context, state) => const BudgetPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/stats',
+                builder: (context, state) => const StatsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/goals',
+                builder: (context, state) => const GoalsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
+          ),
+        ],
+      ),
     ],
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
+      final loc = state.matchedLocation;
+
+      if (loc == '/home') {
+        return '/dashboard';
+      }
+
       if (auth.isLoading) {
-        return state.matchedLocation == '/splash' ? null : '/splash';
+        return loc == '/splash' ? null : '/splash';
       }
       if (auth.hasError) {
         return '/login';
       }
+
       final authState = auth.valueOrNull ?? AuthState.unauthenticated();
       if (!authState.isAuthenticated) {
-        if (state.matchedLocation == '/login' || state.matchedLocation == '/register') {
+        if (loc == '/login' || loc == '/register') {
           return null;
         }
         return '/login';
       }
-      if (state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register' ||
-          state.matchedLocation == '/splash') {
-        return '/home';
+
+      if (_kAuthRoutes.contains(loc)) {
+        return '/dashboard';
       }
       return null;
     },
@@ -45,7 +125,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
 class _RiverpodRouterRefresh extends ChangeNotifier {
   _RiverpodRouterRefresh(this._ref) {
-    _sub = _ref.listen<AsyncValue<AuthState>>(authControllerProvider, (previous, next) => notifyListeners());
+    _sub = _ref.listen<AsyncValue<AuthState>>(
+      authControllerProvider,
+      (previous, next) => notifyListeners(),
+    );
   }
 
   final Ref _ref;
