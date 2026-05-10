@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:finku_mobile/src/core/theme/app_colors.dart';
 import 'package:finku_mobile/src/core/theme/theme_controller.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
 import 'package:finku_mobile/src/features/shell/presentation/app_shell.dart';
@@ -61,11 +60,9 @@ class MoreSheet extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: FinkuColors.glassTokens(Theme.of(context).brightness).fill,
+                color: scheme.surfaceContainer,
                 borderRadius: const BorderRadius.all(Radius.circular(18)),
-                border: Border.all(
-                  color: FinkuColors.glassTokens(Theme.of(context).brightness).border,
-                ),
+                border: Border.all(color: scheme.outlineVariant),
               ),
               child: Row(
                 children: [
@@ -128,13 +125,12 @@ class _SheetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tokens = FinkuColors.glassTokens(Theme.of(context).brightness);
     final fg = danger ? scheme.error : scheme.onSurface;
     return Material(
-      color: tokens.fill,
+      color: scheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: const BorderRadius.all(Radius.circular(18)),
-        side: BorderSide(color: tokens.border),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
       child: InkWell(
         onTap: onTap,

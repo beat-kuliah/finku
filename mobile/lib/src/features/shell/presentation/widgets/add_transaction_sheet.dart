@@ -64,11 +64,9 @@ class AddTransactionSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: FinkuColors.glassTokens(Theme.of(context).brightness).fill,
+                  color: scheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: FinkuColors.glassTokens(Theme.of(context).brightness).border,
-                  ),
+                  border: Border.all(color: scheme.outlineVariant),
                 ),
                 child: Row(
                   children: [

@@ -76,11 +76,14 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _openMoreSheet() {
+    final theme = Theme.of(context);
+    final sheetBg = theme.bottomSheetTheme.modalBackgroundColor ?? theme.colorScheme.surface;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: sheetBg,
+      barrierColor: theme.colorScheme.scrim.withValues(alpha: 0.92),
       builder: (context) {
         return MoreSheet(
           onNavigate: (branch) {
@@ -93,11 +96,14 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _openAddTxSheet() {
+    final theme = Theme.of(context);
+    final sheetBg = theme.bottomSheetTheme.modalBackgroundColor ?? theme.colorScheme.surface;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: sheetBg,
+      barrierColor: theme.colorScheme.scrim.withValues(alpha: 0.92),
       builder: (context) => const AddTransactionSheet(),
     );
   }
