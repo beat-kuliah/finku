@@ -67,6 +67,9 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  ShellBranch? _cachedDockItemsBranch;
+  List<BottomNavItemData>? _cachedDockItems;
+
   void _go(ShellBranch branch) {
     final shell = widget.navigationShell;
     shell.goBranch(
@@ -138,7 +141,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: BottomNavBar(
                     activeIndex: _activeDockIndex(activeBranch),
-                    items: _buildDockItems(activeBranch),
+                    items: _dockItemsFor(activeBranch),
                   ),
                 ),
               ),
@@ -167,6 +170,15 @@ class _AppShellState extends ConsumerState<AppShell> {
     final dockIndex = _dockBranches.indexOf(active);
     if (dockIndex >= 0) return dockIndex;
     return _dockBranches.length;
+  }
+
+  List<BottomNavItemData> _dockItemsFor(ShellBranch active) {
+    if (_cachedDockItems != null && _cachedDockItemsBranch == active) {
+      return _cachedDockItems!;
+    }
+    _cachedDockItemsBranch = active;
+    _cachedDockItems = _buildDockItems(active);
+    return _cachedDockItems!;
   }
 
   List<BottomNavItemData> _buildDockItems(ShellBranch active) {
