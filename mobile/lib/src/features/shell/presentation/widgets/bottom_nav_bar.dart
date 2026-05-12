@@ -1,14 +1,16 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
 
-/// Single 5-slot dock item: icon + (when active) label.
+/// Single 5-slot dock item: icon + label (labels always visible).
 ///
-/// Used by [BottomNavBar]. One dew-like pill follows the finger while pressed;
-/// the highlighted slot (icon + label) tracks the finger. On release the
-/// selection snaps with no glide animation from the previous tab.
+/// Used by [BottomNavBar]. Touching the dock scales it up slightly; while
+/// pressed, the dew pill eases toward the finger with stretch + liquid shading.
+/// On release the selection snaps with no glide from the previous route.
 class BottomNavItemData {
   const BottomNavItemData({
     required this.icon,
@@ -47,17 +49,28 @@ class _PillMotion extends ChangeNotifier {
   void repaint() => notifyListeners();
 }
 
-class _BottomNavBarState extends State<BottomNavBar> {
+class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderStateMixin {
   /// Blur strength for the dock glass. Keep moderate: σ≈48 is very expensive on GPU.
   static const _dockBlurSigma = 22.0;
 
+  /// Preview pill chase while holding — lower = slower, more “water / dew”.
+  static const _previewDewK = 11.0;
+
+  static const _alignEpsilon = 0.0028;
+
   final _pillMotion = _PillMotion();
+
+  Ticker? _pillTicker;
+  Duration? _lastPillTick;
 
   int? _activePointer;
   int _peekIndex = 0;
 
   /// After pointer-up, keep highlight on the chosen slot until [widget.activeIndex] matches.
   int? _pendingReleaseHighlight;
+
+  /// Whole dock scales up slightly while the bar is pressed.
+  bool _dockPressed = false;
 
   @override
   void initState() {
@@ -67,6 +80,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   @override
   void dispose() {
+    _pillTicker?.dispose();
     _pillMotion.dispose();
     super.dispose();
   }
@@ -112,6 +126,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   }
 
   void _snapPillToRoute() {
+    _stopPillTicker();
     final n = widget.items.length;
     if (n == 0) return;
     final x = _alignXForIndex(widget.activeIndex.clamp(0, n - 1), n);
@@ -123,12 +138,70 @@ class _BottomNavBarState extends State<BottomNavBar> {
     p.repaint();
   }
 
-  void _setPreviewToTouch(double x) {
-    final cx = x.clamp(-1.0, 1.0);
+  void _stopPillTicker() {
+    _pillTicker?.stop();
+    _lastPillTick = null;
+  }
+
+  double _chaseToward(double current, double target, double dt) {
+    final d = target - current;
+    if (d.abs() < _alignEpsilon) return target;
+    final alpha = 1 - math.exp(-_previewDewK * dt);
+    return current + d * alpha;
+  }
+
+  bool _previewChaseSettled() {
     final p = _pillMotion;
-    p.previewTargetX = cx;
-    p.previewAlignX = cx;
+    return (p.previewTargetX - p.previewAlignX).abs() < _alignEpsilon;
+  }
+
+  void _startPreviewChaseTicker() {
+    final p = _pillMotion;
+    if (!p.peekActive) return;
+    if (_previewChaseSettled()) {
+      p.previewAlignX = p.previewTargetX;
+      return;
+    }
+    _pillTicker ??= createTicker(_onPreviewChaseTick);
+    _lastPillTick = null;
+    if (!_pillTicker!.isActive) _pillTicker!.start();
+  }
+
+  void _onPreviewChaseTick(Duration elapsed) {
+    if (!mounted) return;
+    final p = _pillMotion;
+    if (!p.peekActive) {
+      _stopPillTicker();
+      return;
+    }
+    final last = _lastPillTick ?? elapsed;
+    var dt = (elapsed - last).inMicroseconds / 1e6;
+    if (dt <= 0) dt = 1 / 60;
+    _lastPillTick = elapsed;
+
+    final next = _chaseToward(p.previewAlignX, p.previewTargetX, dt);
+    p.previewAlignX = next;
     p.repaint();
+
+    if ((p.previewTargetX - next).abs() < _alignEpsilon) {
+      p.previewAlignX = p.previewTargetX;
+      _stopPillTicker();
+      p.repaint();
+    }
+  }
+
+  /// Finger target only; [previewAlignX] eases toward it while [peekActive].
+  void _setPreviewTargetTowardTouch(double x) {
+    final p = _pillMotion;
+    p.previewTargetX = x.clamp(-1.0, 1.0);
+    _startPreviewChaseTicker();
+    p.repaint();
+  }
+
+  int _slotIndexFromAlignX(double ax, int n) {
+    if (n <= 1) return 0;
+    final t = ((ax.clamp(-1.0, 1.0) + 1) * 0.5).clamp(0.0, 1.0);
+    return (t * n).floor().clamp(0, n - 1);
   }
 
   int _slotIndex(double dx, double width) {
@@ -139,24 +212,25 @@ class _BottomNavBarState extends State<BottomNavBar> {
   }
 
   void _onPointerDown(PointerDownEvent e, double width) {
+    setState(() => _dockPressed = true);
     _activePointer = e.pointer;
     final idx = _slotIndex(e.localPosition.dx, width);
     final p = _pillMotion;
     _peekIndex = idx;
     p.peekActive = true;
-    _setPreviewToTouch(_alignXFromDx(e.localPosition.dx, width));
-    setState(() {});
+    // Start the dew slide from the committed pill, not an instant jump.
+    p.previewAlignX = p.committedAlignX;
+    _setPreviewTargetTowardTouch(_alignXFromDx(e.localPosition.dx, width));
   }
 
   void _onPointerMove(PointerMoveEvent e, double width) {
     if (e.pointer != _activePointer) return;
     if (!_pillMotion.peekActive) return;
-    _setPreviewToTouch(_alignXFromDx(e.localPosition.dx, width));
+    _setPreviewTargetTowardTouch(_alignXFromDx(e.localPosition.dx, width));
     final next = _slotIndex(e.localPosition.dx, width);
     if (next != _peekIndex) {
       HapticFeedback.selectionClick();
       _peekIndex = next;
-      setState(() {});
     }
   }
 
@@ -165,6 +239,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     _activePointer = null;
     final p = _pillMotion;
     if (p.peekActive) {
+      _stopPillTicker();
       final n = widget.items.length;
       final idx = _peekIndex.clamp(0, n - 1);
       final x = _alignXForIndex(idx, n);
@@ -180,26 +255,29 @@ class _BottomNavBarState extends State<BottomNavBar> {
         _pendingReleaseHighlight = null;
       }
       widget.items[idx].onTap();
-      setState(() {});
     }
+    setState(() => _dockPressed = false);
   }
 
   void _onPointerCancel(PointerCancelEvent e) {
     if (e.pointer != _activePointer) return;
     _activePointer = null;
+    setState(() => _dockPressed = false);
     final p = _pillMotion;
     if (p.peekActive) {
+      _stopPillTicker();
       _snapPillToRoute();
       p.peekActive = false;
       p.repaint();
       _pendingReleaseHighlight = null;
-      setState(() {});
     }
   }
 
   int _highlightSlot(int n) {
     final route = widget.activeIndex.clamp(0, n - 1);
-    if (_pillMotion.peekActive) return _peekIndex.clamp(0, n - 1);
+    if (_pillMotion.peekActive) {
+      return _slotIndexFromAlignX(_pillMotion.previewAlignX, n);
+    }
     return _pendingReleaseHighlight ?? route;
   }
 
@@ -210,7 +288,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
     final scheme = Theme.of(context).colorScheme;
 
     const radius = 36.0;
-    const barHeight = 78.0;
+    const barHeight = 86.0;
+    const dockPressedScale = 1.045;
 
     final glassGradient = LinearGradient(
       begin: Alignment.topLeft,
@@ -238,8 +317,13 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
+      child: AnimatedScale(
+        scale: _dockPressed ? dockPressedScale : 1.0,
+        alignment: Alignment.bottomCenter,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
           boxShadow: [
             BoxShadow(
@@ -278,8 +362,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                     return Stack(
                       clipBehavior: Clip.antiAlias,
                       children: [
-                        // Single “dew” surface: same layer users read as the active tab,
-                        // not a second preview stack on top of the route pill.
+                        // Dew pill: viscous chase + liquid stretch / shading.
                         Positioned.fill(
                           child: IgnorePointer(
                             child: RepaintBoundary(
@@ -294,6 +377,12 @@ class _BottomNavBarState extends State<BottomNavBar> {
                                       final h = c.maxHeight;
                                       final ax = (p.peekActive ? p.previewAlignX : p.committedAlignX)
                                           .clamp(-1.0, 1.0);
+                                      final lag = p.peekActive
+                                          ? (p.previewTargetX - p.previewAlignX).abs()
+                                          : 0.0;
+                                      final motion = (lag * 3.8).clamp(0.0, 1.0);
+                                      final sx = 1.0 + motion * 0.14;
+                                      final sy = 1.0 - motion * 0.08;
 
                                       return Align(
                                         alignment: Alignment(ax, 0),
@@ -302,11 +391,16 @@ class _BottomNavBarState extends State<BottomNavBar> {
                                           height: h,
                                           child: Padding(
                                             padding: const EdgeInsets.all(2),
-                                            child: DecoratedBox(
-                                              decoration: _navDewPillDecoration(
-                                                scheme: scheme,
-                                                isDark: isDark,
-                                                peeking: p.peekActive,
+                                            child: Transform(
+                                              alignment: Alignment.center,
+                                              transform: Matrix4.diagonal3Values(sx, sy, 1.0),
+                                              child: DecoratedBox(
+                                                decoration: _navDewPillDecoration(
+                                                  scheme: scheme,
+                                                  isDark: isDark,
+                                                  peeking: p.peekActive,
+                                                  motionLag: motion,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -319,29 +413,34 @@ class _BottomNavBarState extends State<BottomNavBar> {
                             ),
                           ),
                         ),
-                        Listener(
-                          behavior: HitTestBehavior.translucent,
-                          onPointerDown: (e) => _onPointerDown(e, barWidth),
-                          onPointerMove: (e) => _onPointerMove(e, barWidth),
-                          onPointerUp: _onPointerUp,
-                          onPointerCancel: _onPointerCancel,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: List.generate(widget.items.length, (index) {
-                              final item = widget.items[index];
-                              final n = widget.items.length;
-                              final highlight = _highlightSlot(n);
-                              final active = index == highlight;
-                              return Expanded(
-                                child: _BottomNavSlot(
-                                  key: ValueKey(index),
-                                  item: item,
-                                  active: active,
-                                  color: scheme.onSurface,
-                                ),
-                              );
-                            }),
-                          ),
+                        ListenableBuilder(
+                          listenable: _pillMotion,
+                          builder: (context, _) {
+                            return Listener(
+                              behavior: HitTestBehavior.translucent,
+                              onPointerDown: (e) => _onPointerDown(e, barWidth),
+                              onPointerMove: (e) => _onPointerMove(e, barWidth),
+                              onPointerUp: _onPointerUp,
+                              onPointerCancel: _onPointerCancel,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: List.generate(widget.items.length, (index) {
+                                  final item = widget.items[index];
+                                  final n = widget.items.length;
+                                  final highlight = _highlightSlot(n);
+                                  final active = index == highlight;
+                                  return Expanded(
+                                    child: _BottomNavSlot(
+                                      key: ValueKey(index),
+                                      item: item,
+                                      active: active,
+                                      color: scheme.onSurface,
+                                    ),
+                                  );
+                                }),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     );
@@ -352,59 +451,69 @@ class _BottomNavBarState extends State<BottomNavBar> {
           ),
         ),
       ),
+      ),
     );
   }
 }
 
-/// One sliding “active” chip: frosted dew / soft haze on glass (no second preview layer).
+/// Frosted dew chip; [motionLag] (0–1) boosts liquid highlights while chasing the finger.
 BoxDecoration _navDewPillDecoration({
   required ColorScheme scheme,
   required bool isDark,
   required bool peeking,
+  double motionLag = 0,
 }) {
+  final lag = motionLag.clamp(0.0, 1.0);
   final primary = scheme.primary;
   final mist = isDark
-      ? Colors.white.withValues(alpha: peeking ? 0.10 : 0.085)
-      : Colors.white.withValues(alpha: peeking ? 0.88 : 0.82);
+      ? Colors.white.withValues(alpha: peeking ? 0.10 + lag * 0.02 : 0.085)
+      : Colors.white.withValues(alpha: peeking ? 0.88 + lag * 0.04 : 0.82);
   final hazeBottom = isDark
-      ? Colors.white.withValues(alpha: 0.02)
-      : primary.withValues(alpha: isDark ? 0.04 : 0.07);
+      ? Colors.white.withValues(alpha: 0.02 + lag * 0.03)
+      : primary.withValues(alpha: 0.07 + lag * 0.05);
 
   return BoxDecoration(
     borderRadius: const BorderRadius.all(Radius.circular(24)),
     gradient: LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
+      begin: Alignment(-0.35 + lag * 0.2, -1),
+      end: Alignment(0.4 - lag * 0.15, 1.1),
       colors: [
-        mist,
-        isDark ? Colors.white.withValues(alpha: 0.045) : Colors.white.withValues(alpha: 0.55),
+        Color.lerp(
+              mist,
+              isDark ? Colors.white.withValues(alpha: 0.22) : Colors.white,
+              lag * 0.35,
+            ) ??
+            mist,
+        isDark
+            ? Colors.white.withValues(alpha: 0.045 + lag * 0.04)
+            : Colors.white.withValues(alpha: 0.55 + lag * 0.12),
         hazeBottom,
       ],
-      stops: const [0.0, 0.52, 1.0],
+      stops: [0.0, 0.45 + lag * 0.08, 1.0],
     ),
     border: Border.all(
       color: isDark
-          ? Colors.white.withValues(alpha: peeking ? 0.22 : 0.16)
+          ? Colors.white.withValues(alpha: peeking ? 0.22 + lag * 0.08 : 0.16 + lag * 0.05)
           : Colors.white.withValues(alpha: peeking ? 0.95 : 0.88),
-      width: 0.5,
+      width: 0.5 + lag * 0.35,
     ),
     boxShadow: [
       BoxShadow(
         color: Colors.black.withValues(alpha: isDark ? 0.14 : 0.05),
-        blurRadius: 14,
-        offset: const Offset(0, 5),
+        blurRadius: 14 + lag * 8,
+        offset: Offset(0, 5 + lag * 3),
       ),
       BoxShadow(
-        color: Colors.white.withValues(alpha: isDark ? 0.06 : 0.45),
-        blurRadius: 10,
-        spreadRadius: -6,
-        offset: const Offset(0, -2),
+        color: Colors.white.withValues(alpha: isDark ? 0.06 + lag * 0.08 : 0.45 + lag * 0.12),
+        blurRadius: 10 + lag * 14,
+        spreadRadius: -6 - lag * 4,
+        offset: Offset(0, -2 - lag * 2),
       ),
       BoxShadow(
-        color: primary.withValues(alpha: isDark ? (peeking ? 0.12 : 0.08) : 0.06),
-        blurRadius: 18,
-        spreadRadius: -12,
-        offset: const Offset(0, 8),
+        color: primary.withValues(alpha: isDark ? (peeking ? 0.12 : 0.08) + lag * 0.14 : 0.06 + lag * 0.12),
+        blurRadius: 18 + lag * 22,
+        spreadRadius: -12 - lag * 6,
+        offset: Offset(0, 8 + lag * 4),
       ),
     ],
   );
@@ -433,12 +542,12 @@ class _BottomNavSlot extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          // Commit is handled by [BottomNavBar]'s [Listener] so preview tracks
-          // from pointer down without double-invoking [onTap].
+          // Commit is handled by [BottomNavBar]'s [Listener] so drag does not
+          // double-invoke [onTap].
           onTap: () {},
           borderRadius: const BorderRadius.all(Radius.circular(26)),
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: active ? 8 : 14),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -448,21 +557,21 @@ class _BottomNavSlot extends StatelessWidget {
                   size: 22,
                   color: active ? color : muted,
                 ),
-                if (active)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: color,
-                        letterSpacing: 0.1,
-                      ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                      color: active ? color : muted,
+                      letterSpacing: 0.1,
                     ),
                   ),
+                ),
               ],
             ),
           ),

@@ -226,7 +226,7 @@ class _ShellBody extends ConsumerWidget {
     final media = MediaQuery.of(context);
     final width = media.size.width;
     final isTablet = width >= _kRailBreakpoint;
-    final bottomPad = isTablet ? 24.0 : 130.0;
+    final bottomPad = isTablet ? 24.0 : 138.0;
 
     return Column(
       children: [
