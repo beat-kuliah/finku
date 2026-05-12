@@ -1,16 +1,14 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
 
 /// Single 5-slot dock item: icon + (when active) label.
 ///
-/// Used by [BottomNavBar]. A committed pill tracks the route; while the finger
-/// is down, a preview pill follows the touch so users can scrub across tabs;
-/// labels stay on the active route until release.
+/// Used by [BottomNavBar]. One dew-like pill follows the finger while pressed;
+/// the highlighted slot (icon + label) tracks the finger. On release the
+/// selection snaps with no glide animation from the previous tab.
 class BottomNavItemData {
   const BottomNavItemData({
     required this.icon,
@@ -37,8 +35,8 @@ class BottomNavBar extends StatefulWidget {
   State<BottomNavBar> createState() => _BottomNavBarState();
 }
 
-/// Pill positions + peek flag. Notifies listeners on animation steps without
-/// rebuilding the glass bar / backdrop (see [ListenableBuilder] in build).
+/// Pill positions + peek flag. [ListenableBuilder] repaints the dew pill without
+/// rebuilding the whole bar.
 class _PillMotion extends ChangeNotifier {
   double committedAlignX = 0;
   double committedTargetX = 0;
@@ -49,20 +47,17 @@ class _PillMotion extends ChangeNotifier {
   void repaint() => notifyListeners();
 }
 
-class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderStateMixin {
-  /// Exponential chase — higher = snappier, lower = more "water".
-  static const _pillChaseK = 19.0;
-
+class _BottomNavBarState extends State<BottomNavBar> {
   /// Blur strength for the dock glass. Keep moderate: σ≈48 is very expensive on GPU.
   static const _dockBlurSigma = 22.0;
 
   final _pillMotion = _PillMotion();
 
-  Ticker? _pillTicker;
-  Duration? _lastPillTick;
-
   int? _activePointer;
   int _peekIndex = 0;
+
+  /// After pointer-up, keep highlight on the chosen slot until [widget.activeIndex] matches.
+  int? _pendingReleaseHighlight;
 
   @override
   void initState() {
@@ -72,7 +67,6 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _pillTicker?.dispose();
     _pillMotion.dispose();
     super.dispose();
   }
@@ -87,8 +81,21 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
       return;
     }
     if (!_pillMotion.peekActive && widget.activeIndex != oldWidget.activeIndex) {
-      _pillMotion.committedTargetX = _alignXForIndex(widget.activeIndex.clamp(0, n - 1), n);
-      _startPillTicker();
+      final x = _alignXForIndex(widget.activeIndex.clamp(0, n - 1), n);
+      final p = _pillMotion;
+      p.committedTargetX = x;
+      p.committedAlignX = x;
+      p.previewTargetX = x;
+      p.previewAlignX = x;
+      p.repaint();
+    }
+    if (_pendingReleaseHighlight != null) {
+      if (widget.activeIndex == _pendingReleaseHighlight) {
+        _pendingReleaseHighlight = null;
+      } else if (widget.activeIndex != oldWidget.activeIndex &&
+          widget.activeIndex != _pendingReleaseHighlight) {
+        _pendingReleaseHighlight = null;
+      }
     }
   }
 
@@ -116,75 +123,12 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
     p.repaint();
   }
 
-  bool _pillMotionSettled() {
+  void _setPreviewToTouch(double x) {
+    final cx = x.clamp(-1.0, 1.0);
     final p = _pillMotion;
-    if ((p.committedTargetX - p.committedAlignX).abs() >= 0.0028) return false;
-    if (p.peekActive && (p.previewTargetX - p.previewAlignX).abs() >= 0.0028) {
-      return false;
-    }
-    return true;
-  }
-
-  void _startPillTicker() {
-    final p = _pillMotion;
-    if (_pillMotionSettled()) {
-      p.committedAlignX = p.committedTargetX;
-      if (p.peekActive) {
-        p.previewAlignX = p.previewTargetX;
-      }
-      return;
-    }
-    _pillTicker ??= createTicker(_onPillTick);
-    _lastPillTick = null;
-    if (!_pillTicker!.isActive) _pillTicker!.start();
-  }
-
-  void _stopPillTicker() {
-    _pillTicker?.stop();
-    _lastPillTick = null;
-  }
-
-  double _chaseToward(double current, double target, double dt) {
-    final d = target - current;
-    if (d.abs() < 0.0028) return target;
-    final alpha = 1 - math.exp(-_pillChaseK * dt);
-    return current + d * alpha;
-  }
-
-  void _onPillTick(Duration elapsed) {
-    if (!mounted) return;
-    final last = _lastPillTick ?? elapsed;
-    var dt = (elapsed - last).inMicroseconds / 1e6;
-    if (dt <= 0) dt = 1 / 60;
-    _lastPillTick = elapsed;
-
-    final p = _pillMotion;
-    final nextC = _chaseToward(p.committedAlignX, p.committedTargetX, dt);
-    final nextP = p.peekActive
-        ? _chaseToward(p.previewAlignX, p.previewTargetX, dt)
-        : p.previewAlignX;
-
-    p.committedAlignX = nextC;
-    if (p.peekActive) {
-      p.previewAlignX = nextP;
-    }
+    p.previewTargetX = cx;
+    p.previewAlignX = cx;
     p.repaint();
-
-    final cDone = (p.committedTargetX - nextC).abs() < 0.0028;
-    final pDone = !p.peekActive || (p.previewTargetX - nextP).abs() < 0.0028;
-    if (cDone && pDone) {
-      _stopPillTicker();
-      p.committedAlignX = p.committedTargetX;
-      if (p.peekActive) {
-        p.previewAlignX = p.previewTargetX;
-      }
-      p.repaint();
-    }
-  }
-
-  void _setPreviewTarget(double x) {
-    _pillMotion.previewTargetX = x.clamp(-1.0, 1.0);
-    _startPillTicker();
   }
 
   int _slotIndex(double dx, double width) {
@@ -200,20 +144,19 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
     final p = _pillMotion;
     _peekIndex = idx;
     p.peekActive = true;
-    p.previewAlignX = p.committedAlignX;
-    p.previewTargetX = _alignXFromDx(e.localPosition.dx, width);
-    p.repaint();
-    _startPillTicker();
+    _setPreviewToTouch(_alignXFromDx(e.localPosition.dx, width));
+    setState(() {});
   }
 
   void _onPointerMove(PointerMoveEvent e, double width) {
     if (e.pointer != _activePointer) return;
     if (!_pillMotion.peekActive) return;
-    _setPreviewTarget(_alignXFromDx(e.localPosition.dx, width));
+    _setPreviewToTouch(_alignXFromDx(e.localPosition.dx, width));
     final next = _slotIndex(e.localPosition.dx, width);
     if (next != _peekIndex) {
       HapticFeedback.selectionClick();
       _peekIndex = next;
+      setState(() {});
     }
   }
 
@@ -224,11 +167,20 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
     if (p.peekActive) {
       final n = widget.items.length;
       final idx = _peekIndex.clamp(0, n - 1);
+      final x = _alignXForIndex(idx, n);
       p.peekActive = false;
-      p.previewAlignX = p.committedAlignX;
-      p.previewTargetX = p.committedTargetX;
+      p.committedTargetX = x;
+      p.committedAlignX = x;
+      p.previewTargetX = x;
+      p.previewAlignX = x;
       p.repaint();
+      if (idx != widget.activeIndex.clamp(0, n - 1)) {
+        _pendingReleaseHighlight = idx;
+      } else {
+        _pendingReleaseHighlight = null;
+      }
       widget.items[idx].onTap();
+      setState(() {});
     }
   }
 
@@ -237,11 +189,18 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
     _activePointer = null;
     final p = _pillMotion;
     if (p.peekActive) {
+      _snapPillToRoute();
       p.peekActive = false;
-      p.previewAlignX = p.committedAlignX;
-      p.previewTargetX = p.committedTargetX;
       p.repaint();
+      _pendingReleaseHighlight = null;
+      setState(() {});
     }
+  }
+
+  int _highlightSlot(int n) {
+    final route = widget.activeIndex.clamp(0, n - 1);
+    if (_pillMotion.peekActive) return _peekIndex.clamp(0, n - 1);
+    return _pendingReleaseHighlight ?? route;
   }
 
   @override
@@ -252,13 +211,6 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
 
     const radius = 36.0;
     const barHeight = 78.0;
-
-    final pillFill = isDark
-        ? Colors.white.withValues(alpha: 0.11)
-        : Colors.white.withValues(alpha: 0.78);
-    final pillBorder = isDark
-        ? Colors.white.withValues(alpha: 0.18)
-        : Colors.white.withValues(alpha: 0.9);
 
     final glassGradient = LinearGradient(
       begin: Alignment.topLeft,
@@ -326,30 +278,8 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
                     return Stack(
                       clipBehavior: Clip.antiAlias,
                       children: [
-                        Listener(
-                          behavior: HitTestBehavior.translucent,
-                          onPointerDown: (e) => _onPointerDown(e, barWidth),
-                          onPointerMove: (e) => _onPointerMove(e, barWidth),
-                          onPointerUp: _onPointerUp,
-                          onPointerCancel: _onPointerCancel,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: List.generate(widget.items.length, (index) {
-                              final item = widget.items[index];
-                              final n = widget.items.length;
-                              final routeSlot = widget.activeIndex.clamp(0, n - 1);
-                              final active = index == routeSlot;
-                              return Expanded(
-                                child: _BottomNavSlot(
-                                  key: ValueKey(index),
-                                  item: item,
-                                  active: active,
-                                  color: scheme.onSurface,
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
+                        // Single “dew” surface: same layer users read as the active tab,
+                        // not a second preview stack on top of the route pill.
                         Positioned.fill(
                           child: IgnorePointer(
                             child: RepaintBoundary(
@@ -362,49 +292,55 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
                                       final n = widget.items.length;
                                       final slotWidth = c.maxWidth / n;
                                       final h = c.maxHeight;
-                                      final committedX = p.committedAlignX.clamp(-1.0, 1.0);
-                                      final previewX = p.previewAlignX.clamp(-1.0, 1.0);
+                                      final ax = (p.peekActive ? p.previewAlignX : p.committedAlignX)
+                                          .clamp(-1.0, 1.0);
 
-                                      Widget slotChild(double ax, BoxDecoration deco) {
-                                        return Align(
-                                          alignment: Alignment(ax, 0),
-                                          child: SizedBox(
-                                            width: slotWidth,
-                                            height: h,
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(2),
-                                              child: DecoratedBox(decoration: deco),
-                                            ),
-                                          ),
-                                        );
-                                      }
-
-                                      return Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          slotChild(
-                                            committedX,
-                                            _navPillDecoration(
-                                              isDark: isDark,
-                                              fill: pillFill,
-                                              border: pillBorder,
-                                            ),
-                                          ),
-                                          if (p.peekActive)
-                                            slotChild(
-                                              previewX,
-                                              _navPreviewPillDecoration(
+                                      return Align(
+                                        alignment: Alignment(ax, 0),
+                                        child: SizedBox(
+                                          width: slotWidth,
+                                          height: h,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(2),
+                                            child: DecoratedBox(
+                                              decoration: _navDewPillDecoration(
                                                 scheme: scheme,
                                                 isDark: isDark,
+                                                peeking: p.peekActive,
                                               ),
                                             ),
-                                        ],
+                                          ),
+                                        ),
                                       );
                                     },
                                   );
                                 },
                               ),
                             ),
+                          ),
+                        ),
+                        Listener(
+                          behavior: HitTestBehavior.translucent,
+                          onPointerDown: (e) => _onPointerDown(e, barWidth),
+                          onPointerMove: (e) => _onPointerMove(e, barWidth),
+                          onPointerUp: _onPointerUp,
+                          onPointerCancel: _onPointerCancel,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: List.generate(widget.items.length, (index) {
+                              final item = widget.items[index];
+                              final n = widget.items.length;
+                              final highlight = _highlightSlot(n);
+                              final active = index == highlight;
+                              return Expanded(
+                                child: _BottomNavSlot(
+                                  key: ValueKey(index),
+                                  item: item,
+                                  active: active,
+                                  color: scheme.onSurface,
+                                ),
+                              );
+                            }),
                           ),
                         ),
                       ],
@@ -420,68 +356,55 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
   }
 }
 
-BoxDecoration _navPillDecoration({
-  required bool isDark,
-  required Color fill,
-  required Color border,
-  double borderWidth = 0.5,
-}) {
-  return BoxDecoration(
-    color: fill,
-    borderRadius: const BorderRadius.all(Radius.circular(24)),
-    border: Border.all(color: border, width: borderWidth),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.06),
-        blurRadius: 12,
-        offset: const Offset(0, 4),
-      ),
-    ],
-  );
-}
-
-/// Touch-track preview pill: follows [ColorScheme.primary] (cyan dark / blue light).
-BoxDecoration _navPreviewPillDecoration({
+/// One sliding “active” chip: frosted dew / soft haze on glass (no second preview layer).
+BoxDecoration _navDewPillDecoration({
   required ColorScheme scheme,
   required bool isDark,
+  required bool peeking,
 }) {
   final primary = scheme.primary;
-  final gradient = isDark
-      ? LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            primary.withValues(alpha: 0.11),
-            FinkuColors.blue600.withValues(alpha: 0.075),
-          ],
-        )
-      : LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withValues(alpha: 0.72),
-            primary.withValues(alpha: 0.11),
-          ],
-        );
+  final mist = isDark
+      ? Colors.white.withValues(alpha: peeking ? 0.10 : 0.085)
+      : Colors.white.withValues(alpha: peeking ? 0.88 : 0.82);
+  final hazeBottom = isDark
+      ? Colors.white.withValues(alpha: 0.02)
+      : primary.withValues(alpha: isDark ? 0.04 : 0.07);
 
   return BoxDecoration(
-    gradient: gradient,
     borderRadius: const BorderRadius.all(Radius.circular(24)),
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        mist,
+        isDark ? Colors.white.withValues(alpha: 0.045) : Colors.white.withValues(alpha: 0.55),
+        hazeBottom,
+      ],
+      stops: const [0.0, 0.52, 1.0],
+    ),
     border: Border.all(
-      color: primary.withValues(alpha: isDark ? 0.38 : 0.26),
-      width: 0.85,
+      color: isDark
+          ? Colors.white.withValues(alpha: peeking ? 0.22 : 0.16)
+          : Colors.white.withValues(alpha: peeking ? 0.95 : 0.88),
+      width: 0.5,
     ),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.05),
-        blurRadius: 10,
-        offset: const Offset(0, 3),
+        color: Colors.black.withValues(alpha: isDark ? 0.14 : 0.05),
+        blurRadius: 14,
+        offset: const Offset(0, 5),
       ),
       BoxShadow(
-        color: primary.withValues(alpha: isDark ? 0.14 : 0.09),
-        blurRadius: 20,
-        spreadRadius: -10,
-        offset: const Offset(0, 6),
+        color: Colors.white.withValues(alpha: isDark ? 0.06 : 0.45),
+        blurRadius: 10,
+        spreadRadius: -6,
+        offset: const Offset(0, -2),
+      ),
+      BoxShadow(
+        color: primary.withValues(alpha: isDark ? (peeking ? 0.12 : 0.08) : 0.06),
+        blurRadius: 18,
+        spreadRadius: -12,
+        offset: const Offset(0, 8),
       ),
     ],
   );
@@ -514,9 +437,7 @@ class _BottomNavSlot extends StatelessWidget {
           // from pointer down without double-invoking [onTap].
           onTap: () {},
           borderRadius: const BorderRadius.all(Radius.circular(26)),
-          child: AnimatedPadding(
-            duration: const Duration(milliseconds: 320),
-            curve: Curves.easeInOutCubic,
+          child: Padding(
             padding: EdgeInsets.symmetric(vertical: active ? 8 : 14),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -527,26 +448,21 @@ class _BottomNavSlot extends StatelessWidget {
                   size: 22,
                   color: active ? color : muted,
                 ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 320),
-                  curve: Curves.easeInOutCubic,
-                  child: active
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            item.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                              letterSpacing: 0.1,
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
+                if (active)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
