@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:finku_mobile/src/core/errors/api_error.dart';
+import 'package:finku_mobile/src/core/network/dio_api_mapper.dart';
 import 'package:finku_mobile/src/features/auth/data/dto/auth_dto.dart';
 
 class AuthApi {
@@ -66,20 +67,6 @@ class AuthApi {
     return MeResponseDto.fromJson(res.data ?? {}).user;
   }
 
-  static ApiError mapDioError(Object error) {
-    if (error is DioException) {
-      final status = error.response?.statusCode ?? 0;
-      final payload = error.response?.data;
-      if (payload is Map<String, dynamic>) {
-        final envelope = ApiErrorEnvelopeDto.fromJson(payload);
-        return ApiError(
-          message: envelope.error?.message ?? error.message ?? 'Request failed',
-          statusCode: status,
-          code: envelope.error?.code,
-        );
-      }
-      return ApiError(message: error.message ?? 'Request failed', statusCode: status);
-    }
-    return ApiError(message: 'Unexpected error', statusCode: 0);
-  }
+  @Deprecated('Use mapDioToApiError from dio_api_mapper.dart')
+  static ApiError mapDioError(Object error) => mapDioToApiError(error);
 }

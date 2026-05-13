@@ -105,44 +105,59 @@ class BranchScaffold extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.children,
+    this.wrapInScrollView = true,
   });
 
   final String title;
   final String subtitle;
   final List<Widget> children;
 
+  /// When false, children manage their own scroll (e.g. [RefreshIndicator] + [ListView]).
+  final bool wrapInScrollView;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          subtitle.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface.withValues(alpha: 0.55),
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            color: scheme.onSurface,
+            letterSpacing: -0.5,
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 20),
+        ...children,
+      ],
+    );
+
+    final padded = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+      child: body,
+    );
+
+    if (!wrapInScrollView) {
+      return padded;
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            subtitle.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface.withValues(alpha: 0.55),
-              letterSpacing: 1.4,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurface,
-              letterSpacing: -0.5,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ...children,
-        ],
-      ),
+      child: body,
     );
   }
 }

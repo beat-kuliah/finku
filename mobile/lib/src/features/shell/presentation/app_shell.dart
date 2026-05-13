@@ -15,13 +15,13 @@ import 'package:finku_mobile/src/features/shell/presentation/widgets/more_sheet.
 
 /// Branches inside the shell — order MUST match `StatefulShellRoute.indexedStack`.
 enum ShellBranch {
-  dashboard('Dashboard', 'Beranda finansial kamu'),
-  transactions('Transactions', 'Catatan masuk & keluar'),
-  wallets('Wallets', 'Dompet & rekening'),
+  dashboard('Beranda', 'Ringkasan finansial'),
+  transactions('Transaksi', 'Catatan masuk & keluar'),
+  wallets('Dompet', 'Dompet & rekening'),
   budget('Budget', 'Pagu pengeluaran'),
-  stats('Stats', 'Insight pengeluaran'),
-  goals('Goals', 'Target tabungan'),
-  profile('Profile', 'Pengaturan akun');
+  stats('Statistik', 'Insight pengeluaran'),
+  goals('Target', 'Target tabungan'),
+  profile('Profil', 'Pengaturan akun');
 
   const ShellBranch(this.title, this.subtitle);
 
@@ -91,6 +91,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: true,
       builder: (context) {
         return MoreSheet(
           onNavigate: (branch) {
@@ -107,6 +108,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: false,
       builder: (context) => const AddTransactionSheet(),
     );
   }
@@ -188,22 +190,22 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   List<BottomNavItemData> _buildDockItems(ShellBranch active) {
     final moreIsActive = _moreBranches.contains(active);
-    final moreLabel = moreIsActive ? active.title : 'More';
+    final moreLabel = moreIsActive ? active.title : 'Lainnya';
 
     return [
       BottomNavItemData(
         icon: Icons.dashboard_rounded,
-        label: 'Home',
+        label: 'Beranda',
         onTap: () => _go(ShellBranch.dashboard),
       ),
       BottomNavItemData(
         icon: Icons.receipt_long_rounded,
-        label: 'Transactions',
+        label: 'Transaksi',
         onTap: () => _go(ShellBranch.transactions),
       ),
       BottomNavItemData(
         icon: Icons.account_balance_wallet_rounded,
-        label: 'Wallets',
+        label: 'Dompet',
         onTap: () => _go(ShellBranch.wallets),
       ),
       BottomNavItemData(
@@ -454,7 +456,7 @@ class _RailLayout extends ConsumerWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: IconButton(
-                          tooltip: 'Logout',
+                          tooltip: 'Keluar',
                           onPressed: () {
                             ref.read(authControllerProvider.notifier).logout();
                           },

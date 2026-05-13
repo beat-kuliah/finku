@@ -1,0 +1,15 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:finku_mobile/src/core/providers/api_providers.dart';
+import 'package:finku_mobile/src/core/providers/data_revision_provider.dart';
+import 'package:finku_mobile/src/features/wallets/data/dto/wallet_groups_dto.dart';
+import 'package:finku_mobile/src/features/wallets/data/dto/wallets_dto.dart';
+
+typedef WalletsSnapshot = ({List<WalletDto> wallets, List<WalletGroupDto> groups});
+
+final walletsDataProvider = FutureProvider.autoDispose<WalletsSnapshot>((ref) async {
+  ref.watch(dataRevisionProvider);
+  final wallets = await ref.watch(walletsApiProvider).list();
+  final groups = await ref.watch(walletGroupsApiProvider).list();
+  return (wallets: wallets, groups: groups);
+});

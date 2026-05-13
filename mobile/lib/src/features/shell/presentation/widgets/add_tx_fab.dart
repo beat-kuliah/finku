@@ -41,15 +41,19 @@ class _AddTxFabState extends State<AddTxFab>
 
         return Transform.scale(
           scale: scale,
-          child: Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: FinkuColors.gradientNeon,
-              boxShadow: FinkuColors.neonGlow(opacity: glowOpacity, blur: 30),
+          child: Semantics(
+            label: 'Tambah transaksi',
+            button: true,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: FinkuColors.gradientNeon,
+                boxShadow: FinkuColors.neonGlow(opacity: glowOpacity, blur: 30),
+              ),
+              child: child,
             ),
-            child: child,
           ),
         );
       },

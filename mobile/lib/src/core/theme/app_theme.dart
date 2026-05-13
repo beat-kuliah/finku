@@ -199,7 +199,7 @@ class AppTheme {
         backgroundColor: isDark ? FinkuColors.ink800 : Colors.white,
         modalBackgroundColor: isDark ? FinkuColors.ink800 : Colors.white,
         surfaceTintColor: Colors.transparent,
-        showDragHandle: true,
+        showDragHandle: false,
         dragHandleColor: scheme.outline,
         elevation: 0,
         shape: const RoundedRectangleBorder(

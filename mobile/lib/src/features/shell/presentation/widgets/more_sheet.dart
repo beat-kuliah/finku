@@ -41,19 +41,19 @@ class MoreSheet extends ConsumerWidget {
             ),
             _SheetTile(
               icon: Icons.pie_chart_rounded,
-              label: 'Stats',
+              label: 'Statistik',
               onTap: () => onNavigate(ShellBranch.stats),
             ),
             const SizedBox(height: 8),
             _SheetTile(
               icon: Icons.flag_rounded,
-              label: 'Goals',
+              label: 'Target',
               onTap: () => onNavigate(ShellBranch.goals),
             ),
             const SizedBox(height: 8),
             _SheetTile(
               icon: Icons.person_rounded,
-              label: 'Profile',
+              label: 'Profil',
               onTap: () => onNavigate(ShellBranch.profile),
             ),
             const SizedBox(height: 16),
@@ -95,7 +95,7 @@ class MoreSheet extends ConsumerWidget {
             const SizedBox(height: 16),
             _SheetTile(
               icon: Icons.logout_rounded,
-              label: 'Logout',
+              label: 'Keluar',
               danger: true,
               onTap: () async {
                 Navigator.of(context).pop();
