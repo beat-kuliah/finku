@@ -37,7 +37,10 @@ export default function BudgetPage() {
   }, [from, to]);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [load, version]);
 
   const totalLimit = items.reduce((s, b) => s + b.limitAmount, 0);

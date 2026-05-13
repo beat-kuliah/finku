@@ -15,7 +15,7 @@ func EnsureNewUserDefaults(ctx context.Context, q *sqlc.Queries, userID uuid.UUI
 		return err
 	}
 	if nW == 0 {
-		if _, err := q.InsertWallet(ctx, userID, "Dompet utama", "cash", nil); err != nil {
+		if _, err := q.InsertWallet(ctx, userID, "Dompet utama", "cash", nil, nil); err != nil {
 			return err
 		}
 	}

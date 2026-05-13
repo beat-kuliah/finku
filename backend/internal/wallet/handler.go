@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"finku/backend/internal/httpx"
 	"finku/backend/internal/middleware"
@@ -43,7 +44,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
 		return
 	}
-	out, err := h.svc.Create(r.Context(), uid, in.Name, in.WalletType, in.Icon)
+	gid, err := parseCreateGroupID(in.GroupID)
+	if err != nil {
+		httpx.WriteServiceError(w, err)
+		return
+	}
+	out, err := h.svc.Create(r.Context(), uid, in.Name, in.WalletType, in.Icon, gid)
 	if err != nil {
 		httpx.WriteServiceError(w, err)
 		return
@@ -67,7 +73,17 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
 		return
 	}
-	out, err := h.svc.Update(r.Context(), uid, id, in.Name, in.WalletType, in.Icon)
+	existing, err := h.svc.GetWallet(r.Context(), uid, id)
+	if err != nil {
+		httpx.WriteServiceError(w, err)
+		return
+	}
+	gid, err := parsePatchGroupID(in.GroupIDRaw, existing.GroupID)
+	if err != nil {
+		httpx.WriteServiceError(w, err)
+		return
+	}
+	out, err := h.svc.Update(r.Context(), uid, id, in.Name, in.WalletType, in.Icon, gid)
 	if err != nil {
 		httpx.WriteServiceError(w, err)
 		return
@@ -98,10 +114,49 @@ type createWalletBody struct {
 	Name       string  `json:"name"`
 	WalletType string  `json:"walletType"`
 	Icon       *string `json:"icon"`
+	GroupID    *string `json:"groupId"`
 }
 
 type updateWalletBody struct {
-	Name       string  `json:"name"`
-	WalletType string  `json:"walletType"`
-	Icon       *string `json:"icon"`
+	Name         string          `json:"name"`
+	WalletType   string          `json:"walletType"`
+	Icon         *string         `json:"icon"`
+	GroupIDRaw   json.RawMessage `json:"groupId"`
+}
+
+func parseCreateGroupID(s *string) (*uuid.UUID, error) {
+	if s == nil {
+		return nil, nil
+	}
+	t := strings.TrimSpace(*s)
+	if t == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(t)
+	if err != nil {
+		return nil, httpx.SvcErr(http.StatusBadRequest, "BAD_ID", "groupId tidak valid.")
+	}
+	return &id, nil
+}
+
+func parsePatchGroupID(raw json.RawMessage, existing *uuid.UUID) (*uuid.UUID, error) {
+	if len(raw) == 0 {
+		return existing, nil
+	}
+	if string(raw) == "null" {
+		return nil, nil
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, httpx.SvcErr(http.StatusBadRequest, "BAD_ID", "groupId tidak valid.")
+	}
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return nil, httpx.SvcErr(http.StatusBadRequest, "BAD_ID", "groupId tidak valid.")
+	}
+	return &id, nil
 }

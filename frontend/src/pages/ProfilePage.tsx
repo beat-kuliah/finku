@@ -73,16 +73,22 @@ export default function ProfilePage() {
   const [newCatKind, setNewCatKind] = useState<"income" | "expense">("expense");
 
   useEffect(() => {
-    setUsernameDraft(user?.username ?? "");
+    const timer = window.setTimeout(() => {
+      setUsernameDraft(user?.username ?? "");
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [user?.username]);
 
   useEffect(() => {
     if (!user) return;
-    setFin({
-      monthlyIncome: user.monthlyIncome != null ? String(user.monthlyIncome) : "",
-      payday: user.payday != null ? String(user.payday) : "",
-      currency: user.currency || "IDR",
-    });
+    const timer = window.setTimeout(() => {
+      setFin({
+        monthlyIncome: user.monthlyIncome != null ? String(user.monthlyIncome) : "",
+        payday: user.payday != null ? String(user.payday) : "",
+        currency: user.currency || "IDR",
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [user?.monthlyIncome, user?.payday, user?.currency, user]);
 
   useEffect(() => {

@@ -40,8 +40,23 @@ type AuthResponse struct {
 	AccessToken string  `json:"accessToken"`
 }
 
+type MobileAuthResponse struct {
+	User         UserDTO `json:"user"`
+	AccessToken  string  `json:"accessToken"`
+	RefreshToken string  `json:"refreshToken"`
+}
+
 type RefreshResponse struct {
 	AccessToken string `json:"accessToken"`
+}
+
+type MobileRefreshRequest struct {
+	RefreshToken string `json:"refreshToken" validate:"required"`
+}
+
+type MobileRefreshResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
 }
 
 type UsernameSuggestResponse struct {

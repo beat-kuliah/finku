@@ -26,7 +26,7 @@ export default defineConfig(({ command }) => {
       port: 5173,
       host: true,
       // Tailscale MagicDNS / other tunnels send Host: *.ts.net
-      allowedHosts: [".tailfc34e1.ts.net", "fransiskus-fds.tailfc34e1.ts.net", "*.beatfraps.com"],
+      allowedHosts: [".tailfc34e1.ts.net", "fransiskus-fds.tailfc34e1.ts.net", "*.beatfraps.com", "100.94.165.67", "127.0.0.1"],
       proxy: {
         "/api": {
           target: "http://localhost:8080",

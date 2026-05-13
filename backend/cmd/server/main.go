@@ -118,6 +118,10 @@ func main() {
 		r.With(rateMw.Limit).Post("/register", h.Register)
 		r.With(rateMw.Limit).Post("/login", h.Login)
 		r.With(rateMw.Limit).Post("/oauth/google", h.OAuthGoogle)
+		r.With(rateMw.Limit).Post("/mobile/register", h.MobileRegister)
+		r.With(rateMw.Limit).Post("/mobile/login", h.MobileLogin)
+		r.With(rateMw.Limit).Post("/mobile/oauth/google", h.MobileOAuthGoogle)
+		r.Post("/mobile/refresh", h.MobileRefresh)
 		r.Post("/refresh", h.Refresh)
 		r.Group(func(r chi.Router) {
 			r.Use(authMw.Require)
@@ -129,6 +133,7 @@ func main() {
 			r.Get("/identities", h.ListIdentities)
 			r.Delete("/identities/{provider}", h.UnlinkIdentity)
 			r.Post("/logout", h.Logout)
+			r.Post("/mobile/logout", h.MobileLogout)
 		})
 	})
 
@@ -139,6 +144,11 @@ func main() {
 			r.Post("/wallets", walletH.Create)
 			r.Patch("/wallets/{id}", walletH.Update)
 			r.Delete("/wallets/{id}", walletH.Archive)
+
+			r.Get("/wallet-groups", walletH.ListGroups)
+			r.Post("/wallet-groups", walletH.CreateGroup)
+			r.Patch("/wallet-groups/{id}", walletH.UpdateGroup)
+			r.Delete("/wallet-groups/{id}", walletH.DeleteGroup)
 
 			r.Get("/categories", catH.List)
 			r.Post("/categories", catH.Create)

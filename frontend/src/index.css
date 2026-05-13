@@ -121,6 +121,26 @@
            transition-all duration-200;
   }
 
+  select.input {
+    color-scheme: dark;
+  }
+
+  select.input option,
+  select.input optgroup {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  html[data-theme="light"] select.input {
+    color-scheme: light;
+  }
+
+  html[data-theme="light"] select.input option,
+  html[data-theme="light"] select.input optgroup {
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+
   .chip {
     @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
            bg-white/5 border border-white/10 text-white/90;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthApiError, useAuth } from "@/store/auth";
 import { motion } from "framer-motion";
@@ -25,15 +25,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
-  const [form, setForm] = useState({ identifier: "", password: "" });
+  const [form, setForm] = useState(() => ({
+    identifier: typeof window !== "undefined" ? window.localStorage.getItem(REMEMBER_KEY) ?? "" : "",
+    password: "",
+  }));
   const [rememberMe, setRememberMe] = useState(() =>
     typeof window !== "undefined" ? !!window.localStorage.getItem(REMEMBER_KEY) : false,
   );
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem(REMEMBER_KEY);
-    if (saved) setForm((f) => ({ ...f, identifier: saved }));
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

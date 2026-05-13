@@ -7,6 +7,7 @@ export type Wallet = {
   walletType: string;
   icon?: string;
   balance: number;
+  groupId?: string | null;
   archivedAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -17,7 +18,12 @@ export async function listWallets(archived = false) {
   return apiJson<{ wallets: Wallet[] }>(`/wallets${q}`);
 }
 
-export async function createWallet(body: { name: string; walletType?: string; icon?: string }) {
+export async function createWallet(body: {
+  name: string;
+  walletType?: string;
+  icon?: string;
+  groupId?: string | null;
+}) {
   return apiJson<{ wallet: Wallet }>(`/wallets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -25,7 +31,12 @@ export async function createWallet(body: { name: string; walletType?: string; ic
   });
 }
 
-export async function updateWallet(id: string, body: { name: string; walletType?: string; icon?: string }) {
+export async function updateWallet(id: string, body: {
+  name: string;
+  walletType?: string;
+  icon?: string;
+  groupId?: string | null;
+}) {
   return apiJson<{ wallet: Wallet }>(`/wallets/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

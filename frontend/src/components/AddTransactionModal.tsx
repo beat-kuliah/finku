@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import * as walletsApi from "@/api/wallets";
+import * as walletGroupsApi from "@/api/walletGroups";
 import * as catApi from "@/api/categories";
 import * as txApi from "@/api/transactions";
 import { useDataVersion } from "@/store/dataVersion";
@@ -16,6 +17,7 @@ export default function AddTransactionModal() {
 
   const [tab, setTab] = useState<Tab>("expense");
   const [wallets, setWallets] = useState<walletsApi.Wallet[]>([]);
+  const [groupNameById, setGroupNameById] = useState<Map<string, string>>(() => new Map());
   const [catsIncome, setCatsIncome] = useState<catApi.Category[]>([]);
   const [catsExpense, setCatsExpense] = useState<catApi.Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,38 +32,57 @@ export default function AddTransactionModal() {
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    void (async () => {
-      try {
-        const [w, catRes] = await Promise.all([walletsApi.listWallets(), catApi.listCategories(false)]);
-        setWallets(w.wallets);
-        const income = catRes.categories.filter((c) => c.kind === "income");
-        const expense = catRes.categories.filter((c) => c.kind === "expense");
-        setCatsIncome(income);
-        setCatsExpense(expense);
-        if (w.wallets[0] && !walletId) setWalletId(w.wallets[0].id);
-        if (tab !== "transfer") {
-          const list = tab === "income" ? income : expense;
-          const def = list.find((c) => c.name.toLowerCase().includes("lainnya")) ?? list[0];
-          if (def) setCategoryId(def.id);
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      void (async () => {
+        try {
+          const [w, gRes, catRes] = await Promise.all([
+            walletsApi.listWallets(),
+            walletGroupsApi.listWalletGroups(),
+            catApi.listCategories(false),
+          ]);
+          setWallets(w.wallets);
+          setGroupNameById(new Map(gRes.groups.map((g) => [g.id, g.name])));
+          const income = catRes.categories.filter((c) => c.kind === "income");
+          const expense = catRes.categories.filter((c) => c.kind === "expense");
+          setCatsIncome(income);
+          setCatsExpense(expense);
+          if (w.wallets[0] && !walletId) setWalletId(w.wallets[0].id);
+          if (tab !== "transfer") {
+            const list = tab === "income" ? income : expense;
+            const def = list.find((c) => c.name.toLowerCase().includes("lainnya")) ?? list[0];
+            if (def) setCategoryId(def.id);
+          }
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Gagal memuat data");
+        } finally {
+          setLoading(false);
         }
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Gagal memuat data");
-      } finally {
-        setLoading(false);
-      }
-    })();
+      })();
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset form fields when opening
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    const list = tab === "income" ? catsIncome : catsExpense;
-    const def = list.find((c) => c.name.toLowerCase().includes("lainnya")) ?? list[0];
-    if (tab !== "transfer" && def) setCategoryId(def.id);
+    const timer = window.setTimeout(() => {
+      const list = tab === "income" ? catsIncome : catsExpense;
+      const def = list.find((c) => c.name.toLowerCase().includes("lainnya")) ?? list[0];
+      if (tab !== "transfer" && def) setCategoryId(def.id);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [tab, open, catsIncome, catsExpense]);
 
   if (!open) return null;
+
+  const walletLabel = (w: walletsApi.Wallet) => {
+    const bal = w.balance.toLocaleString("id-ID");
+    const gid = w.groupId ?? undefined;
+    const gname = gid ? groupNameById.get(gid) : undefined;
+    if (gname) return `${gname} · ${w.name} (${bal})`;
+    return `${w.name} (${bal})`;
+  };
 
   const parseAmount = () => {
     const n = Number(String(amount).replace(/\./g, "").replace(/,/g, "."));
@@ -185,7 +206,7 @@ export default function AddTransactionModal() {
                   <option value="">— Pilih —</option>
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} ({w.balance.toLocaleString("id-ID")})
+                      {walletLabel(w)}
                     </option>
                   ))}
                 </select>
@@ -204,7 +225,7 @@ export default function AddTransactionModal() {
                       .filter((w) => w.id !== walletId)
                       .map((w) => (
                         <option key={w.id} value={w.id}>
-                          {w.name}
+                          {walletLabel(w)}
                         </option>
                       ))}
                   </select>

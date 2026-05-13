@@ -38,9 +38,27 @@ type Wallet struct {
 	WalletType  string     `json:"wallet_type"`
 	Icon        *string    `json:"icon,omitempty"`
 	Balance     int64      `json:"balance"`
+	GroupID     *uuid.UUID `json:"group_id,omitempty"`
 	ArchivedAt  *time.Time `json:"archived_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// WalletGroup mirrors wallet_groups.
+type WalletGroup struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Name      string    `json:"name"`
+	Icon      *string   `json:"icon,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// WalletGroupWithStats is used for listing groups with active-wallet aggregates.
+type WalletGroupWithStats struct {
+	WalletGroup
+	WalletCount  int64 `json:"wallet_count"`
+	TotalBalance int64 `json:"total_balance"`
 }
 
 // Category mirrors categories (kind: income | expense).
