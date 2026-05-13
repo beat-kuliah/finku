@@ -57,6 +57,14 @@ const _moreBranches = <ShellBranch>[
 /// Tablet breakpoint.
 const double _kRailBreakpoint = 720;
 
+/// Keep in sync with [BottomNavBar]: outer `fromLTRB` horizontal/bottom + `barHeight`.
+const double _kDockOuterMargin = 20;
+const double _kDockBarHeight = 86;
+/// Space between dock top and FAB bottom (visual breathing room).
+const double _kFabGapAboveDock = 18;
+/// Keep in sync with [AddTxFab] width/height.
+const double _kAddFabSize = 60;
+
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
@@ -137,19 +145,16 @@ class _AppShellState extends ConsumerState<AppShell> {
               bottom: 0,
               child: SafeArea(
                 top: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: BottomNavBar(
-                    activeIndex: _activeDockIndex(activeBranch),
-                    items: _dockItemsFor(activeBranch),
-                  ),
+                child: BottomNavBar(
+                  activeIndex: _activeDockIndex(activeBranch),
+                  items: _dockItemsFor(activeBranch),
                 ),
               ),
             ),
           if (!useRail)
             Positioned(
-              right: 20,
-              bottom: 110,
+              right: _kDockOuterMargin,
+              bottom: _kDockOuterMargin + _kDockBarHeight + _kFabGapAboveDock,
               child: SafeArea(
                 top: false,
                 child: AddTxFab(onPressed: _openAddTxSheet),
@@ -226,7 +231,14 @@ class _ShellBody extends ConsumerWidget {
     final media = MediaQuery.of(context);
     final width = media.size.width;
     final isTablet = width >= _kRailBreakpoint;
-    final bottomPad = isTablet ? 24.0 : 138.0;
+    // Clear dock + FAB: extra inset beyond `MediaQuery.padding.bottom`.
+    final bottomPad = isTablet
+        ? 24.0
+        : _kDockOuterMargin +
+            _kDockBarHeight +
+            _kFabGapAboveDock +
+            _kAddFabSize +
+            8;
 
     return Column(
       children: [

@@ -316,7 +316,8 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
     );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+      // Match horizontal inset so the dock sits evenly from screen edges.
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: AnimatedScale(
         scale: _dockPressed ? dockPressedScale : 1.0,
         alignment: Alignment.bottomCenter,
