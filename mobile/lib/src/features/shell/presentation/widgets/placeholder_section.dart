@@ -118,6 +118,14 @@ class BranchScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // [AppShell] inflates `MediaQuery.padding.bottom` for dock + FAB; respect it here.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final contentPadding = EdgeInsets.fromLTRB(
+      20,
+      24,
+      20,
+      bottomInset > 0 ? bottomInset : 40,
+    );
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -147,7 +155,7 @@ class BranchScaffold extends StatelessWidget {
     );
 
     final padded = Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+      padding: contentPadding,
       child: body,
     );
 
@@ -156,7 +164,7 @@ class BranchScaffold extends StatelessWidget {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+      padding: contentPadding,
       child: body,
     );
   }
