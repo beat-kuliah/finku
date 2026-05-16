@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "features": "Fitur",
+    "testimonials": "Testimoni",
+    "pricing": "Harga",
+    "login": "Masuk",
+    "signup": "Mulai Gratis"
+  },
+  "hero": {
+    "chip": "Baru launch — gratis selamanya buat early user!",
+    "titleLine1": "Atur duit",
+    "titleHighlight1": "anti ribet",
+    "titleLine2": "glow up finansial",
+    "titleHighlight2": "auto.",
+    "subtitle": "FinKu bantu kamu track pengeluaran, atur budget, dan capai goals finansial — semuanya dalam satu app kekinian yang",
+    "subtitleBold": "super gampang",
+    "ctaPrimary": "Mulai Gratis Sekarang",
+    "ctaSecondary": "Liat Demo",
+    "users": "10k+ Gen Z udah daftar",
+    "rating": "4.9/5 rating"
+  },
+  "stats": {
+    "users": "Gen Z user",
+    "tracked": "duit tercatat",
+    "rating": "App rating",
+    "uptime": "Always on",
+    "valueUsers": "10k+",
+    "valueTracked": "500M+",
+    "valueRating": "4.9★",
+    "valueUptime": "24/7"
+  },
+  "features": {
+    "chip": "Kenapa pilih FinKu",
+    "title": "Fitur yang bikin kamu",
+    "titleHighlight": "ketagihan",
+    "titleSuffix": "nabung",
+    "subtitle": "Semua yang kamu butuhin buat jadi financially independent, dalam satu app yang asik dipake.",
+    "items": {
+      "track": { "title": "Catat duit 3 detik", "desc": "Tap, ketik, selesai. Gak ribet, gak bikin ngantuk." },
+      "budget": { "title": "Budget anti boncos", "desc": "Kasih limit per kategori, auto-warn kalau mau over." },
+      "insight": { "title": "Insight kayak AI", "desc": "\"Kopi kamu bulan ini 450k — setara 1 AirPods 😱\"" },
+      "streak": { "title": "Streak & badge", "desc": "Makin rajin catat, makin banyak badge. FOMO-worthy!" },
+      "notif": { "title": "Notif smart", "desc": "Ingetin bayar tagihan, reminder nabung, anti lupa." },
+      "secure": { "title": "Aman & private", "desc": "Data dienkripsi. Cuma kamu yang bisa liat duit kamu." }
+    }
+  },
+  "testimonials": {
+    "chip": "Real talk",
+    "title": "Kata mereka yang udah",
+    "titleHighlight": "cuan",
+    "titleSuffix": "",
+    "items": {
+      "kania": { "name": "Kania, 22", "role": "Mahasiswi", "text": "Akhirnya tau kenapa duit bulanan selalu habis sebelum akhir bulan 😭 sekarang bisa nabung buat konser!", "emoji": "🎤" },
+      "raka": { "name": "Raka, 24", "role": "First Jobber", "text": "UI-nya estetik banget, gak berasa lagi ngatur duit. Kayak main game tapi duitnya beneran nambah.", "emoji": "🎮" },
+      "sasha": { "name": "Sasha, 20", "role": "Content Creator", "text": "Fitur insight-nya savage. Nunjukin kalau aku boros banget di ShopeeLive. Toxic tapi berguna 💀", "emoji": "💅" }
+    }
+  },
+  "cta": {
+    "chip": "Gratis selamanya",
+    "title": "Siap glow up finansial kamu?",
+    "subtitle": "Daftar sekarang, mulai tracking dalam 30 detik. No credit card, no ribet, no drama.",
+    "signup": "Buat Akun Gratis",
+    "login": "Udah punya akun? Masuk"
+  },
+  "footer": {
+    "copyright": "© 2026 FinKu — made with 💙 for Gen Z",
+    "privacy": "Privasi",
+    "terms": "Syarat",
+    "support": "Support"
+  },
+  "mockup": {
+    "greeting": "Halo, Kania 👋",
+    "date": "Kamis, 23 Apr",
+    "balanceLabel": "Saldo bulan ini",
+    "vsLastMonth": "vs bulan lalu",
+    "budgetLabel": "Budget bulan ini",
+    "onTrack": "On track!",
+    "recentTx": "Transaksi terbaru",
+    "tx1": { "name": "McD Delivery", "cat": "Makan" },
+    "tx2": { "name": "Starbucks", "cat": "Jajan" },
+    "tx3": { "name": "Gaji April", "cat": "Income" }
+  }
+}

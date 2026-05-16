@@ -2,6 +2,11 @@
 // The lib is loaded on demand from its CDN so we don't ship the SDK
 // when the feature is disabled (no client ID).
 
+import i18n from "@/i18n";
+
+const t = (key: string, options?: Record<string, string>) =>
+  i18n.t(key, { ns: "auth", ...options });
+
 declare global {
   interface Window {
     google?: GoogleNamespace;
@@ -53,9 +58,11 @@ function loadScript(src: string): Promise<void> {
         return;
       }
       existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("script failed")), {
-        once: true,
-      });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error(t("oauth.scriptFailed"))),
+        { once: true },
+      );
       return;
     }
     const s = document.createElement("script");
@@ -66,7 +73,7 @@ function loadScript(src: string): Promise<void> {
       s.dataset.loaded = "1";
       resolve();
     };
-    s.onerror = () => reject(new Error("script failed"));
+    s.onerror = () => reject(new Error(t("oauth.scriptFailed")));
     document.head.appendChild(s);
   });
 }
@@ -80,7 +87,7 @@ let googlePending: ((token: string) => void) | null = null;
 let googleReject: ((err: Error) => void) | null = null;
 
 async function ensureGoogle(): Promise<void> {
-  if (!isGoogleEnabled) throw new Error("Google login belum dikonfigurasi.");
+  if (!isGoogleEnabled) throw new Error(t("oauth.notConfigured"));
   if (window.google?.accounts?.id) {
     if (!googleInitialized) {
       window.google.accounts.id.initialize({
@@ -89,7 +96,7 @@ async function ensureGoogle(): Promise<void> {
           if (googlePending && resp.credential) {
             googlePending(resp.credential);
           } else if (googleReject) {
-            googleReject(new Error("Tidak ada credential dari Google."));
+            googleReject(new Error(t("oauth.noCredential")));
           }
           googlePending = null;
           googleReject = null;
@@ -100,14 +107,14 @@ async function ensureGoogle(): Promise<void> {
     return;
   }
   await loadScript(GOOGLE_GIS_SRC);
-  if (!window.google?.accounts?.id) throw new Error("Gagal memuat Google SDK.");
+  if (!window.google?.accounts?.id) throw new Error(t("oauth.sdkLoadFailed"));
   window.google.accounts.id.initialize({
     client_id: googleClientId,
     callback: (resp) => {
       if (googlePending && resp.credential) {
         googlePending(resp.credential);
       } else if (googleReject) {
-        googleReject(new Error("Tidak ada credential dari Google."));
+        googleReject(new Error(t("oauth.noCredential")));
       }
       googlePending = null;
       googleReject = null;
@@ -131,9 +138,11 @@ export async function signInWithGoogle(): Promise<string> {
         const reason =
           notification.getNotDisplayedReason() ??
           notification.getDismissedReason() ??
-          "dibatalkan";
+          t("oauth.cancelled");
         if (googleReject) {
-          googleReject(new Error(`Login Google ${reason}.`));
+          googleReject(
+            new Error(t("oauth.failedWithReason", { reason })),
+          );
         }
         googlePending = null;
         googleReject = null;

@@ -1,20 +1,25 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AtSign, Sparkles, ArrowRight } from "lucide-react";
 import { AuthApiError, useAuth } from "@/store/auth";
 import { toast } from "sonner";
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,32}$/;
 
-function clientValidate(username: string): string | null {
+function clientValidate(
+  username: string,
+  t: (key: string) => string,
+): string | null {
   const u = username.trim();
-  if (u.length === 0) return "Username wajib diisi.";
-  if (u.length < 3) return "Minimal 3 karakter.";
-  if (u.length > 32) return "Maksimal 32 karakter.";
-  if (!USERNAME_RE.test(u)) return "Hanya huruf, angka, dan underscore.";
+  if (u.length === 0) return t("usernameModal.required");
+  if (u.length < 3) return t("usernameModal.minLength");
+  if (u.length > 32) return t("usernameModal.maxLength");
+  if (!USERNAME_RE.test(u)) return t("usernameModal.invalidChars");
   return null;
 }
 
 export default function SetUsernameModal() {
+  const { t } = useTranslation("profile");
   const setUsername = useAuth((s) => s.setUsername);
   const fetchSuggestion = useAuth((s) => s.fetchUsernameSuggestion);
 
@@ -47,7 +52,7 @@ export default function SetUsernameModal() {
     inputRef.current?.focus();
   }, [loadedSuggestion]);
 
-  const clientErr = clientValidate(value);
+  const clientErr = clientValidate(value, t);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,12 +63,12 @@ export default function SetUsernameModal() {
     setLoading(true);
     try {
       await setUsername(value.trim());
-      toast.success("Username tersimpan.");
+      toast.success(t("usernameModal.saved"));
     } catch (err) {
       if (err instanceof AuthApiError) {
         toast.error(err.message);
       } else {
-        toast.error("Gagal menghubungi server.");
+        toast.error(t("usernameModal.serverFailed"));
       }
     } finally {
       setLoading(false);
@@ -76,21 +81,16 @@ export default function SetUsernameModal() {
         <div className="mb-5">
           <div className="chip mb-3">
             <Sparkles className="w-3.5 h-3.5 text-neon-pink" />
-            <span>Selesaikan profil dulu yuk</span>
+            <span>{t("usernameModal.chip")}</span>
           </div>
-          <h2 className="font-display font-extrabold text-2xl">
-            Pilih username kamu
-          </h2>
-          <p className="text-sm text-white/60 mt-1">
-            Username dipakai buat login dan biar temen bisa nemuin kamu. 3-32
-            karakter, huruf/angka/underscore.
-          </p>
+          <h2 className="font-display font-extrabold text-2xl">{t("usernameModal.title")}</h2>
+          <p className="text-sm text-white/60 mt-1">{t("usernameModal.subtitle")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-              Username
+              {t("username")}
             </label>
             <div className="relative">
               <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -98,7 +98,11 @@ export default function SetUsernameModal() {
                 ref={inputRef}
                 type="text"
                 required
-                placeholder={loadedSuggestion ? "username" : "lagi nyari ide..."}
+                placeholder={
+                  loadedSuggestion
+                    ? t("usernameModal.placeholder")
+                    : t("usernameModal.placeholderLoading")
+                }
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 className="input !pl-11"
@@ -113,7 +117,8 @@ export default function SetUsernameModal() {
                 onClick={() => setValue(suggestion)}
                 className="mt-2 text-xs text-neon-pink hover:text-neon-purple font-semibold transition-colors"
               >
-                Pakai saran: <span className="underline">{suggestion}</span>
+                {t("usernameModal.useSuggestion")}{" "}
+                <span className="underline">{suggestion}</span>
               </button>
             )}
             {value && clientErr && (
@@ -129,11 +134,11 @@ export default function SetUsernameModal() {
             {loading ? (
               <>
                 <Sparkles className="w-4 h-4 animate-spin" />
-                Menyimpan...
+                {t("saving")}
               </>
             ) : (
               <>
-                Simpan & lanjut
+                {t("usernameModal.submit")}
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

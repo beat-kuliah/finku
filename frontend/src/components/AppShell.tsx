@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
   Bell,
@@ -42,21 +43,6 @@ type AppShellProps = {
 /** Routes opened from the mobile "More" sheet — bottom bar shows this slot as active with the child page name. */
 const MORE_MOBILE_SECTIONS: readonly ActiveSection[] = ["stats", "goals", "profile"];
 
-const navItems: Array<{
-  key: ActiveSection;
-  label: string;
-  to: string;
-  icon: ReactNode;
-}> = [
-    { key: "dashboard", label: "Dashboard", to: "/dashboard", icon: <House className="w-4 h-4" /> },
-    { key: "transactions", label: "Transactions", to: "/transactions", icon: <ReceiptText className="w-4 h-4" /> },
-    { key: "stats", label: "Stats", to: "/stats", icon: <ChartPie className="w-4 h-4" /> },
-    { key: "budget", label: "Budget", to: "/budget", icon: <PiggyBank className="w-4 h-4" /> },
-    { key: "goals", label: "Goals", to: "/goals", icon: <Goal className="w-4 h-4" /> },
-    { key: "wallets", label: "Wallets", to: "/wallets", icon: <Wallet className="w-4 h-4" /> },
-    { key: "profile", label: "Profile", to: "/profile", icon: <User className="w-4 h-4" /> },
-  ];
-
 export default function AppShell({
   activeSection,
   desktopTitle,
@@ -64,7 +50,26 @@ export default function AppShell({
   rightAction,
   children,
 }: AppShellProps) {
+  const { t } = useTranslation("nav");
   const navigate = useNavigate();
+
+  const navItems = useMemo(
+    (): Array<{
+      key: ActiveSection;
+      label: string;
+      to: string;
+      icon: ReactNode;
+    }> => [
+      { key: "dashboard", label: t("dashboard"), to: "/dashboard", icon: <House className="w-4 h-4" /> },
+      { key: "transactions", label: t("transactions"), to: "/transactions", icon: <ReceiptText className="w-4 h-4" /> },
+      { key: "stats", label: t("stats"), to: "/stats", icon: <ChartPie className="w-4 h-4" /> },
+      { key: "budget", label: t("budget"), to: "/budget", icon: <PiggyBank className="w-4 h-4" /> },
+      { key: "goals", label: t("goals"), to: "/goals", icon: <Goal className="w-4 h-4" /> },
+      { key: "wallets", label: t("wallets"), to: "/wallets", icon: <Wallet className="w-4 h-4" /> },
+      { key: "profile", label: t("profile"), to: "/profile", icon: <User className="w-4 h-4" /> },
+    ],
+    [t],
+  );
   const logout = useAuth((s) => s.logout);
   const user = useAuth((s) => s.user);
   const setAddTxOpen = useUIStore((s) => s.setAddTransactionOpen);
@@ -78,12 +83,12 @@ export default function AppShell({
   const moreSlotActive = MORE_MOBILE_SECTIONS.includes(activeSection);
   const moreSlotLabel =
     activeSection === "stats"
-      ? "Stats"
+      ? t("stats")
       : activeSection === "goals"
-        ? "Goals"
+        ? t("goals")
         : activeSection === "profile"
-          ? "Profile"
-          : "More";
+          ? t("profile")
+          : t("more");
   /** Ikon slot More tetap ⋯ — affordance “menu”; nama halaman aktif cukup di label. */
   const moreSlotIcon = <MoreHorizontal className="w-5 h-5" />;
 
@@ -139,7 +144,7 @@ export default function AppShell({
           <div className="mt-auto space-y-1.5">
             <SidebarNavItem
               icon={<LogOut className="w-4 h-4" />}
-              label="Logout"
+              label={t("logout")}
               danger
               onClick={handleLogout}
             />
@@ -153,7 +158,7 @@ export default function AppShell({
                 <Logo />
               </div>
               <div className="hidden lg:block">
-                <p className="text-sm text-white/60">{desktopSubtitle ?? "FinKu App"}</p>
+                <p className="text-sm text-white/60">{desktopSubtitle ?? t("appName")}</p>
                 <p className="font-semibold">{desktopTitle}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -161,7 +166,7 @@ export default function AppShell({
                   <>
                     <button
                       type="button"
-                      onClick={() => toast.message("Notifikasi: belum ada push — pengaturan ada di Profil.")}
+                      onClick={() => toast.message(t("notificationsToast"))}
                       className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 grid place-items-center hover:bg-white/10 transition-colors"
                     >
                       <Bell className="w-4 h-4" />
@@ -185,7 +190,7 @@ export default function AppShell({
         type="button"
         onClick={openAdd}
         className="grid fixed bottom-28 right-5 md:bottom-8 md:right-8 w-14 h-14 rounded-full bg-gradient-neon shadow-neon place-items-center animate-pulse-glow z-50"
-        aria-label="Tambah transaksi"
+        aria-label={t("addTransaction")}
       >
         <Plus className="w-6 h-6" />
       </button>
@@ -195,25 +200,25 @@ export default function AppShell({
           <div className="min-h-[78px] py-1 rounded-[2rem] border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_20px_40px_-18px_rgba(0,0,0,0.7)] px-1.5 flex items-stretch justify-between gap-0.5">
             <BottomNavItem
               icon={<House className="w-5 h-5" />}
-              label="Home"
+              label={t("home")}
               active={mobileActive === "dashboard"}
               onClick={() => handleMobileNav("dashboard", "/dashboard")}
             />
             <BottomNavItem
               icon={<ReceiptText className="w-5 h-5" />}
-              label="Transactions"
+              label={t("transactions")}
               active={mobileActive === "transactions"}
               onClick={() => handleMobileNav("transactions", "/transactions")}
             />
             <BottomNavItem
               icon={<Wallet className="w-5 h-5" />}
-              label="Wallets"
+              label={t("wallets")}
               active={mobileActive === "wallets"}
               onClick={() => handleMobileNav("wallets", "/wallets")}
             />
             <BottomNavItem
               icon={<PiggyBank className="w-5 h-5" />}
-              label="Budget"
+              label={t("budget")}
               active={mobileActive === "budget"}
               onClick={() => handleMobileNav("budget", "/budget")}
             />
@@ -221,7 +226,7 @@ export default function AppShell({
               icon={moreSlotIcon}
               label={moreSlotLabel}
               active={moreSlotActive}
-              ariaLabel={moreSlotActive ? `${moreSlotLabel}, buka menu lainnya` : "Lainnya"}
+              ariaLabel={moreSlotActive ? t("moreAriaActive", { label: moreSlotLabel }) : t("moreAria")}
               onClick={() => setMoreSheetOpen(true)}
             />
           </div>

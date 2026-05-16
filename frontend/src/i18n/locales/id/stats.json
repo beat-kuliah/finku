@@ -1,0 +1,11 @@
+{
+  "title": "Stats",
+  "subtitle": "Analitik pengeluaran",
+  "period": "Periode {{from}} — {{to}}",
+  "totalIncome": "Total income",
+  "totalExpense": "Total expense",
+  "byCategory": "Per kategori",
+  "weeklyExpense": "Per minggu (expense)",
+  "noData": "Belum ada data.",
+  "expense": "Expense"
+}

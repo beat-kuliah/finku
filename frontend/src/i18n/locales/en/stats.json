@@ -1,0 +1,11 @@
+{
+  "title": "Stats",
+  "subtitle": "Spending analytics",
+  "period": "Period {{from}} — {{to}}",
+  "totalIncome": "Total income",
+  "totalExpense": "Total expense",
+  "byCategory": "By category",
+  "weeklyExpense": "Weekly (expense)",
+  "noData": "No data yet.",
+  "expense": "Expense"
+}

@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import { apiJson, apiUrl, bindOnRefreshed, bindTokenGetter } from "@/lib/api";
+import i18n from "@/i18n";
+
+const authT = (key: string) => i18n.t(key, { ns: "auth" });
 
 export type AuthUser = {
   id: string;
@@ -115,10 +118,10 @@ export const useAuth = create<AuthState>((set, get) => ({
       body: JSON.stringify({ identifier, password }),
       credentials: "include",
     });
-    if (!res.ok) throw await readError(res, "Login gagal");
+    if (!res.ok) throw await readError(res, authT("login.failed"));
     const data = (await res.json()) as { accessToken?: string; user?: AuthUser };
     if (!data.accessToken || !data.user) {
-      throw new AuthApiError("Invalid response", res.status);
+      throw new AuthApiError(authT("errors.invalidResponse"), res.status);
     }
     set({ accessToken: data.accessToken, user: data.user, status: "ready" });
   },
@@ -130,10 +133,10 @@ export const useAuth = create<AuthState>((set, get) => ({
       body: JSON.stringify({ idToken }),
       credentials: "include",
     });
-    if (!res.ok) throw await readError(res, "Login Google gagal");
+    if (!res.ok) throw await readError(res, authT("login.googleFailed"));
     const data = (await res.json()) as { accessToken?: string; user?: AuthUser };
     if (!data.accessToken || !data.user) {
-      throw new AuthApiError("Invalid response", res.status);
+      throw new AuthApiError(authT("errors.invalidResponse"), res.status);
     }
     set({ accessToken: data.accessToken, user: data.user, status: "ready" });
   },
@@ -145,10 +148,10 @@ export const useAuth = create<AuthState>((set, get) => ({
       body: JSON.stringify({ name, username, email, password }),
       credentials: "include",
     });
-    if (!res.ok) throw await readError(res, "Pendaftaran gagal");
+    if (!res.ok) throw await readError(res, authT("register.failedGeneric"));
     const data = (await res.json()) as { accessToken?: string; user?: AuthUser };
     if (!data.accessToken || !data.user) {
-      throw new AuthApiError("Invalid response", res.status);
+      throw new AuthApiError(authT("errors.invalidResponse"), res.status);
     }
     set({ accessToken: data.accessToken, user: data.user, status: "ready" });
   },
@@ -180,7 +183,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       body: JSON.stringify({ username }),
       credentials: "include",
     });
-    if (!res.ok) throw await readError(res, "Gagal menyimpan username");
+    if (!res.ok) throw await readError(res, authT("errors.setUsernameFailed"));
     const data = (await res.json()) as { user: AuthUser };
     set({ user: data.user });
     return data.user;
@@ -197,7 +200,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       body: JSON.stringify(input),
       credentials: "include",
     });
-    if (!res.ok) throw await readError(res, "Gagal menyimpan password");
+    if (!res.ok) throw await readError(res, authT("errors.updatePasswordFailed"));
     const data = (await res.json()) as { user: AuthUser };
     set({ user: data.user });
     return data.user;
@@ -209,7 +212,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       headers: t ? { Authorization: `Bearer ${t}` } : {},
       credentials: "include",
     });
-    if (!res.ok) throw await readError(res, "Gagal mengambil saran username");
+    if (!res.ok) throw await readError(res, authT("errors.fetchSuggestionFailed"));
     const data = (await res.json()) as { suggestion: string };
     return data.suggestion;
   },
@@ -221,7 +224,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       headers: t ? { Authorization: `Bearer ${t}` } : {},
       credentials: "include",
     });
-    if (!res.ok) throw await readError(res, "Gagal melepas akun");
+    if (!res.ok) throw await readError(res, authT("errors.unlinkFailed"));
     const data = (await res.json()) as { user: AuthUser };
     set({ user: data.user });
     return data.user;

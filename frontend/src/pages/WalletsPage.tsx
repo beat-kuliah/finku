@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Wallet as WalletIcon } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import AddWalletModal from "@/components/AddWalletModal";
@@ -6,14 +7,21 @@ import EditWalletModal from "@/components/EditWalletModal";
 import * as walletsApi from "@/api/wallets";
 import * as walletGroupsApi from "@/api/walletGroups";
 import { useDataVersion } from "@/store/dataVersion";
-import { formatIDR } from "@/lib/format";
+import { localeCompareName } from "@/lib/dates";
+import { getBcp47Tag } from "@/lib/locale";
 import { toast } from "sonner";
 
 const bumpData = () => useDataVersion.getState().bump();
 
+function formatWalletBalance(amount: number): string {
+  const value = Math.round(amount).toLocaleString(getBcp47Tag());
+  return `Rp ${value}`;
+}
+
 type Tab = "active" | "archived";
 
 export default function WalletsPage() {
+  const { t } = useTranslation("wallets");
   const version = useDataVersion((s) => s.version);
   const [tab, setTab] = useState<Tab>("active");
   const [activeWallets, setActiveWallets] = useState<walletsApi.Wallet[]>([]);
@@ -37,11 +45,11 @@ export default function WalletsPage() {
       setAllForArchived(all.wallets);
       setGroups(gRes.groups);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal memuat");
+      toast.error(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -61,7 +69,7 @@ export default function WalletsPage() {
   );
 
   const sortedGroups = useMemo(
-    () => [...groups].sort((a, b) => a.name.localeCompare(b.name, "id", { sensitivity: "base" })),
+    () => [...groups].sort((a, b) => localeCompareName(a.name, b.name)),
     [groups],
   );
 
@@ -94,29 +102,29 @@ export default function WalletsPage() {
   const saveRenameGroup = async (id: string) => {
     const name = editingGroupName.trim();
     if (!name) {
-      toast.error("Nama grup tidak boleh kosong.");
+      toast.error(t("groupNameEmpty"));
       return;
     }
     try {
       await walletGroupsApi.updateWalletGroup(id, { name });
       bumpData();
-      toast.success("Grup diperbarui.");
+      toast.success(t("groupUpdated"));
       cancelRenameGroup();
       void load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      toast.error(e instanceof Error ? e.message : t("failed"));
     }
   };
 
   const handleDeleteGroup = async (g: walletGroupsApi.WalletGroup) => {
-    if (!confirm(`Hapus grup "${g.name}"? Dompet di dalamnya akan dipindah ke Tanpa grup.`)) return;
+    if (!confirm(t("deleteGroupConfirm", { name: g.name }))) return;
     try {
       await walletGroupsApi.deleteWalletGroup(g.id);
       bumpData();
-      toast.success("Grup dihapus.");
+      toast.success(t("groupDeleted"));
       void load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      toast.error(e instanceof Error ? e.message : t("failed"));
     }
   };
 
@@ -130,7 +138,7 @@ export default function WalletsPage() {
       <div className="min-w-0">
         <span className="font-medium">{w.name}</span>
         <span className="text-white/50 text-xs ml-2">({w.walletType})</span>
-        <p className="text-white/70 font-semibold mt-0.5">{formatIDR(w.balance)}</p>
+        <p className="text-white/70 font-semibold mt-0.5">{formatWalletBalance(w.balance)}</p>
       </div>
       {showArchive && !w.archivedAt && (
         <div className="flex items-center gap-2 shrink-0">
@@ -139,51 +147,51 @@ export default function WalletsPage() {
             className="text-xs text-white/70 hover:underline"
             onClick={() => setEditingWallet(w)}
           >
-            Edit
+            {t("edit")}
           </button>
           <button
             type="button"
             className="text-xs text-amber-300 hover:underline"
             onClick={async () => {
-              if (!confirm(`Arsipkan dompet "${w.name}"?`)) return;
+              if (!confirm(t("archiveConfirm", { name: w.name }))) return;
               try {
                 await walletsApi.archiveWallet(w.id);
                 bumpData();
-                toast.success("Dompet diarsipkan.");
+                toast.success(t("archivedSuccess"));
                 void load();
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Gagal");
+                toast.error(e instanceof Error ? e.message : t("failed"));
               }
             }}
           >
-            Arsipkan
+            {t("archive")}
           </button>
         </div>
       )}
       {!showArchive && w.archivedAt && (
-        <span className="text-xs text-white/40 shrink-0">Diarsipkan</span>
+        <span className="text-xs text-white/40 shrink-0">{t("archivedLabel")}</span>
       )}
     </li>
   );
 
   return (
     <>
-      <AppShell activeSection="wallets" desktopTitle="Wallets" desktopSubtitle="Dompet & saldo">
+      <AppShell activeSection="wallets" desktopTitle={t("title")} desktopSubtitle={t("subtitle")}>
       <section className="card !p-6 md:!p-7 bg-gradient-tiktok bg-[length:200%_200%] animate-gradient-x">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">Total saldo (aktif)</p>
+            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">{t("totalBalance")}</p>
             <h1 className="font-display text-3xl md:text-4xl font-extrabold mt-1">
-              {loading ? "…" : formatIDR(totalActiveBalance)}
+              {loading ? "…" : formatWalletBalance(totalActiveBalance)}
             </h1>
             <p className="text-sm text-white/80 mt-2">
-              {activeWallets.length} dompet aktif
-              {archivedWallets.length > 0 ? ` · ${archivedWallets.length} diarsipkan` : ""}
+              {t("activeWallets", { count: activeWallets.length })}
+              {archivedWallets.length > 0 ? t("archivedCount", { count: archivedWallets.length }) : ""}
             </p>
           </div>
           <div className="chip !bg-white/20 !border-white/30 !text-white">
             <WalletIcon className="w-3.5 h-3.5" />
-            Kelola dompet
+            {t("manageWallets")}
           </div>
         </div>
       </section>
@@ -195,31 +203,31 @@ export default function WalletsPage() {
             className={`btn-secondary !py-1.5 !px-3 text-xs ${tab === "active" ? "ring-1 ring-neon-cyan" : ""}`}
             onClick={() => setTab("active")}
           >
-            Aktif
+            {t("active")}
           </button>
           <button
             type="button"
             className={`btn-secondary !py-1.5 !px-3 text-xs ${tab === "archived" ? "ring-1 ring-neon-cyan" : ""}`}
             onClick={() => setTab("archived")}
           >
-            Diarsipkan
+            {t("archived")}
           </button>
         </div>
 
         {tab === "active" && (
           <div className="flex justify-end">
             <button type="button" className="btn-primary !py-2 !px-3 text-sm" onClick={() => setAddModalOpen(true)}>
-              Tambah dompet
+              {t("addWallet")}
             </button>
           </div>
         )}
 
-        {loading && <p className="text-white/50 text-sm">Memuat…</p>}
+        {loading && <p className="text-white/50 text-sm">{t("loading")}</p>}
         {!loading && tab === "archived" && list.length === 0 && (
-          <p className="text-white/50 text-sm">Belum ada dompet diarsipkan.</p>
+          <p className="text-white/50 text-sm">{t("noArchived")}</p>
         )}
         {!loading && tab === "active" && activeWallets.length === 0 && groups.length === 0 && (
-          <p className="text-white/50 text-sm">Belum ada dompet aktif.</p>
+          <p className="text-white/50 text-sm">{t("noActive")}</p>
         )}
 
         {!loading && tab === "active" && (
@@ -244,18 +252,18 @@ export default function WalletsPage() {
                             className="btn-primary !py-1.5 !px-2 text-xs"
                             onClick={() => void saveRenameGroup(g.id)}
                           >
-                            Simpan
+                            {t("save")}
                           </button>
                           <button type="button" className="btn-secondary !py-1.5 !px-2 text-xs" onClick={cancelRenameGroup}>
-                            Batal
+                            {t("cancel")}
                           </button>
                         </div>
                       ) : (
                         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                           <h2 className="font-display font-bold text-base">{g.name}</h2>
-                          <span className="text-neon-cyan font-semibold text-sm">{formatIDR(subtotal)}</span>
+                          <span className="text-neon-cyan font-semibold text-sm">{formatWalletBalance(subtotal)}</span>
                           <span className="text-white/45 text-xs">
-                            {inGroup.length} dompet
+                            {t("walletCount", { count: inGroup.length })}
                           </span>
                         </div>
                       )}
@@ -267,20 +275,20 @@ export default function WalletsPage() {
                           className="text-xs text-white/70 hover:underline"
                           onClick={() => startRenameGroup(g)}
                         >
-                          Rename
+                          {t("rename")}
                         </button>
                         <button
                           type="button"
                           className="text-xs text-rose-300 hover:underline"
                           onClick={() => void handleDeleteGroup(g)}
                         >
-                          Hapus
+                          {t("delete")}
                         </button>
                       </div>
                     )}
                   </div>
                   {inGroup.length === 0 ? (
-                    <p className="text-white/40 text-xs pl-1">Belum ada dompet di grup ini.</p>
+                    <p className="text-white/40 text-xs pl-1">{t("noWalletsInGroup")}</p>
                   ) : (
                     <ul className="space-y-2 text-sm">{inGroup.map((w) => renderWalletRow(w, true))}</ul>
                   )}
@@ -290,16 +298,18 @@ export default function WalletsPage() {
 
             <div className="space-y-2">
               <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/10 pb-2">
-                <h2 className="font-display font-bold text-base text-white/90">Tanpa grup</h2>
+                <h2 className="font-display font-bold text-base text-white/90">{t("ungrouped")}</h2>
                 <div className="flex flex-wrap items-baseline gap-2">
                   <span className="text-neon-cyan font-semibold text-sm">
-                    {formatIDR(walletsByGroupId.ungrouped.reduce((s, w) => s + w.balance, 0))}
+                    {formatWalletBalance(walletsByGroupId.ungrouped.reduce((s, w) => s + w.balance, 0))}
                   </span>
-                  <span className="text-white/45 text-xs">{walletsByGroupId.ungrouped.length} dompet</span>
+                  <span className="text-white/45 text-xs">
+                    {t("walletCount", { count: walletsByGroupId.ungrouped.length })}
+                  </span>
                 </div>
               </div>
               {walletsByGroupId.ungrouped.length === 0 ? (
-                <p className="text-white/40 text-xs pl-1">Tidak ada dompet di luar grup.</p>
+                <p className="text-white/40 text-xs pl-1">{t("noUngrouped")}</p>
               ) : (
                 <ul className="space-y-2 text-sm">
                   {walletsByGroupId.ungrouped.map((w) => renderWalletRow(w, true))}

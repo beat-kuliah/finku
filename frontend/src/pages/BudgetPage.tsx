@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import AppShell from "@/components/AppShell";
 import * as budgetsApi from "@/api/budgets";
 import * as catApi from "@/api/categories";
@@ -9,6 +10,7 @@ import { formatIDR } from "@/lib/format";
 import { toast } from "sonner";
 
 export default function BudgetPage() {
+  const { t } = useTranslation("budget");
   const version = useDataVersion((s) => s.version);
   const [items, setItems] = useState<budgetsApi.Budget[]>([]);
   const [cats, setCats] = useState<catApi.Category[]>([]);
@@ -30,11 +32,11 @@ export default function BudgetPage() {
       setItems(b.budgets);
       setCats(c.categories.filter((x) => x.kind === "expense"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal memuat");
+      toast.error(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -51,7 +53,7 @@ export default function BudgetPage() {
     e.preventDefault();
     const lim = Number(String(newLimit).replace(/\./g, ""));
     if (!newCat || !Number.isFinite(lim) || lim <= 0) {
-      toast.error("Pilih kategori dan isi limit valid.");
+      toast.error(t("invalidForm"));
       return;
     }
     try {
@@ -60,31 +62,31 @@ export default function BudgetPage() {
         periodAnchor: from,
         limitAmount: lim,
       });
-      toast.success("Budget ditambahkan.");
+      toast.success(t("added"));
       setShowAdd(false);
       setNewLimit("");
       bumpData();
       void load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal");
+      toast.error(err instanceof Error ? err.message : t("failed"));
     }
   };
 
   return (
-    <AppShell activeSection="budget" desktopTitle="Budget" desktopSubtitle="Kontrol pengeluaran per kategori">
+    <AppShell activeSection="budget" desktopTitle={t("title")} desktopSubtitle={t("subtitle")}>
       <section className="card !p-6 md:!p-7">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-white/60 font-semibold">Budget bulan ini</p>
-            <h1 className="font-display text-3xl font-extrabold mt-1">Progress vs limit</h1>
+            <p className="text-xs uppercase tracking-wider text-white/60 font-semibold">{t("sectionLabel")}</p>
+            <h1 className="font-display text-3xl font-extrabold mt-1">{t("heading")}</h1>
           </div>
           <button type="button" className="btn-primary !py-2.5 !px-4 text-sm" onClick={() => setShowAdd(true)}>
-            Tambah Budget
+            {t("addBudget")}
           </button>
         </div>
         <div className="mt-6">
           <div className="flex items-center justify-between text-sm text-white/70 mb-2">
-            <span>Total terpakai</span>
+            <span>{t("totalUsed")}</span>
             <span className="font-semibold text-white">
               {formatIDR(totalSpent)} / {formatIDR(totalLimit)}
             </span>
@@ -101,11 +103,11 @@ export default function BudgetPage() {
             onSubmit={(e) => void handleAdd(e)}
             className="card !p-6 max-w-md w-full space-y-4 border border-white/15"
           >
-            <h3 className="font-display font-bold text-lg">Budget baru</h3>
+            <h3 className="font-display font-bold text-lg">{t("newBudget")}</h3>
             <div>
-              <label className="block text-xs text-white/60 mb-1">Kategori pengeluaran</label>
+              <label className="block text-xs text-white/60 mb-1">{t("category")}</label>
               <select className="input" value={newCat} onChange={(e) => setNewCat(e.target.value)} required>
-                <option value="">— Pilih —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {cats.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.icon ? `${c.icon} ` : ""}
@@ -115,15 +117,15 @@ export default function BudgetPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-white/60 mb-1">Limit (IDR)</label>
+              <label className="block text-xs text-white/60 mb-1">{t("limit")}</label>
               <input className="input" value={newLimit} onChange={(e) => setNewLimit(e.target.value)} required />
             </div>
             <div className="flex gap-2 justify-end">
               <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
-                Batal
+                {t("cancel")}
               </button>
               <button type="submit" className="btn-primary">
-                Simpan
+                {t("save")}
               </button>
             </div>
           </form>
@@ -131,8 +133,8 @@ export default function BudgetPage() {
       )}
 
       <section className="space-y-4">
-        {loading && <p className="text-white/50 text-sm">Memuat…</p>}
-        {!loading && items.length === 0 && <p className="text-white/50 text-sm">Belum ada budget untuk periode ini.</p>}
+        {loading && <p className="text-white/50 text-sm">{t("loading")}</p>}
+        {!loading && items.length === 0 && <p className="text-white/50 text-sm">{t("noBudgets")}</p>}
         {!loading &&
           items.map((item) => {
             const p = item.limitAmount > 0 ? Math.min(100, Math.round((item.spent / item.limitAmount) * 100)) : 0;
@@ -151,7 +153,7 @@ export default function BudgetPage() {
                 </div>
                 <p className="text-xs text-white/60 mt-2">
                   {formatIDR(item.spent)} / {formatIDR(item.limitAmount)}
-                  {item.paused ? " · dijeda (kategori diarsipkan)" : ""}
+                  {item.paused ? t("pausedArchived") : ""}
                 </p>
               </div>
             );

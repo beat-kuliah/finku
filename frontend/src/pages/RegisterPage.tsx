@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AuthApiError, useAuth } from "@/store/auth";
 import { motion } from "framer-motion";
 import {
@@ -22,6 +23,7 @@ import { toast } from "sonner";
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,32}$/;
 
 export default function RegisterPage() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const register = useAuth((s) => s.register);
   const loginWithGoogle = useAuth((s) => s.loginWithGoogle);
@@ -37,47 +39,50 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
 
-  const pwStrength = passwordStrength(form.password);
+  const pwStrength = passwordStrength(form.password, t);
   const usernameInvalid = form.username.length > 0 && !USERNAME_RE.test(form.username);
   const passwordsMatch =
     form.confirmPassword.length === 0 || form.password === form.confirmPassword;
 
+  const benefits = [
+    t("registerPage.benefit1"),
+    t("registerPage.benefit2"),
+    t("registerPage.benefit3"),
+    t("registerPage.benefit4"),
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
-      toast.error("Please accept the terms & privacy policy first 😉");
+      toast.error(t("register.acceptTerms"));
       return;
     }
     if (!USERNAME_RE.test(form.username)) {
-      toast.error(
-        "Username must be 3-32 characters: letters, numbers, and underscore only.",
-      );
+      toast.error(t("register.usernameInvalid"));
       return;
     }
     if (!passwordsMatch) {
-      toast.error("Password and confirmation password do not match.");
+      toast.error(t("register.passwordMismatch"));
       return;
     }
     setLoading(true);
     try {
       await register(form.name, form.username, form.email, form.password);
-      toast.success("Account created successfully. Welcome!");
+      toast.success(t("register.success"));
       navigate("/dashboard", { replace: true });
     } catch (err) {
       if (err instanceof AuthApiError) {
         if (err.code === "USERNAME_TAKEN") {
-          toast.error("Username is already taken. Please choose another.");
+          toast.error(t("register.usernameTaken"));
         } else if (err.code === "EMAIL_TAKEN" || err.status === 409) {
-          toast.error(
-            "Email or username is already registered. Please log in or use another one.",
-          );
+          toast.error(t("register.emailTaken"));
         } else if (err.status === 429) {
-          toast.error("Too many attempts. Please try again later.");
+          toast.error(t("register.tooManyAttempts"));
         } else {
-          toast.error("Registration failed. Please try again.");
+          toast.error(t("register.failed"));
         }
       } else {
-        toast.error("Failed to contact server. Make sure the backend is running.");
+        toast.error(t("register.serverError"));
       }
     } finally {
       setLoading(false);
@@ -89,10 +94,10 @@ export default function RegisterPage() {
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
-      toast.success("Logged in with Google successfully.");
+      toast.success(t("register.googleSuccess"));
       navigate("/dashboard", { replace: true });
     } catch {
-      toast.error("Google login failed.");
+      toast.error(t("register.googleFailed"));
     } finally {
       setOauthLoading(null);
     }
@@ -102,27 +107,22 @@ export default function RegisterPage() {
     <div className="relative min-h-screen flex">
       <BlobBackground />
 
-      {/* LEFT - Brand panel */}
       <aside className="hidden lg:flex flex-col justify-between w-[45%] xl:w-[50%] p-10 relative">
         <Logo size="md" />
 
         <div className="space-y-6 max-w-md">
           <div className="chip">
             <Gift className="w-3.5 h-3.5 text-neon-pink" />
-            <span>Free forever — no credit card needed</span>
+            <span>{t("registerPage.brandChip")}</span>
           </div>
           <h1 className="font-display font-extrabold text-5xl xl:text-6xl leading-[1.05] text-balance">
-            Join <span className="text-gradient">10k+ Gen Z</span> yang udah
-            glow up finansialnya
+            {t("registerPage.brandTitlePrefix")}{" "}
+            <span className="text-gradient">{t("registerPage.brandTitleHighlight")}</span>{" "}
+            {t("registerPage.brandTitleSuffix")}
           </h1>
 
           <ul className="space-y-3 pt-4">
-            {[
-              "Catat pengeluaran 3 detik, gak ribet",
-              "Insight finansial yang gak ngebosenin",
-              "Streak & badge biar makin rajin nabung",
-              "Aman, private, dan gratis selamanya",
-            ].map((item) => (
+            {benefits.map((item) => (
               <li key={item} className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-lg bg-gradient-neon grid place-items-center flex-shrink-0 mt-0.5 shadow-neon">
                   <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
@@ -144,18 +144,15 @@ export default function RegisterPage() {
               ))}
             </div>
             <div className="text-sm">
-              <div className="font-semibold">+ 500 baru minggu ini</div>
-              <div className="text-xs text-white/50">lagi rame nih 🔥</div>
+              <div className="font-semibold">{t("registerPage.socialProofTitle")}</div>
+              <div className="text-xs text-white/50">{t("registerPage.socialProofSubtitle")}</div>
             </div>
           </div>
         </div>
 
-        <div className="text-xs text-white/40">
-          © 2026 FinKu — made with 💙 for Gen Z
-        </div>
+        <div className="text-xs text-white/40">{t("registerPage.copyright")}</div>
       </aside>
 
-      {/* RIGHT - Form panel */}
       <main className="flex-1 flex items-center justify-center p-5 md:p-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -169,34 +166,31 @@ export default function RegisterPage() {
 
           <div className="card !p-7 md:!p-9">
             <div className="mb-6">
-              <h2 className="font-display font-extrabold text-3xl">
-                Bikin akun baru 🚀
-              </h2>
-              <p className="text-sm text-white/60 mt-1">
-                30 detik doang, gak pake ribet!
-              </p>
+              <h2 className="font-display font-extrabold text-3xl">{t("registerPage.title")}</h2>
+              <p className="text-sm text-white/60 mt-1">{t("registerPage.subtitle")}</p>
             </div>
 
             {isGoogleEnabled && (
               <>
                 <div className="mb-5">
                   <SocialButton
+                    label={t("registerPage.googleButton")}
                     loading={oauthLoading === "google"}
                     disabled={oauthLoading !== null}
                     onClick={handleGoogle}
                   />
                 </div>
 
-                <div className="divider-or mb-5">atau pake email</div>
+                <div className="divider-or mb-5">{t("registerPage.dividerOr")}</div>
               </>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <Field
-                label="Nama kamu"
+                label={t("registerPage.nameLabel")}
                 icon={<User className="w-4 h-4" />}
                 type="text"
-                placeholder="Kania Putri"
+                placeholder={t("registerPage.namePlaceholder")}
                 value={form.name}
                 onChange={(v) => setForm((f) => ({ ...f, name: v }))}
                 required
@@ -204,7 +198,7 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-                  Username
+                  {t("registerPage.usernameLabel")}
                 </label>
                 <div className="relative">
                   <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -213,7 +207,7 @@ export default function RegisterPage() {
                     required
                     minLength={3}
                     maxLength={32}
-                    placeholder="kania_putri"
+                    placeholder={t("registerPage.usernamePlaceholder")}
                     value={form.username}
                     onChange={(e) =>
                       setForm((f) => ({
@@ -227,17 +221,15 @@ export default function RegisterPage() {
                   />
                 </div>
                 {usernameInvalid && (
-                  <p className="text-[11px] text-red-300 mt-2">
-                    3-32 karakter, hanya huruf, angka, dan underscore.
-                  </p>
+                  <p className="text-[11px] text-red-300 mt-2">{t("registerPage.usernameHint")}</p>
                 )}
               </div>
 
               <Field
-                label="Email"
+                label={t("registerPage.emailLabel")}
                 icon={<Mail className="w-4 h-4" />}
                 type="email"
-                placeholder="kamu@email.com"
+                placeholder={t("registerPage.emailPlaceholder")}
                 value={form.email}
                 onChange={(v) => setForm((f) => ({ ...f, email: v }))}
                 required
@@ -245,7 +237,7 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-                  Password
+                  {t("registerPage.passwordLabel")}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -253,7 +245,7 @@ export default function RegisterPage() {
                     type={showPassword ? "text" : "password"}
                     required
                     minLength={8}
-                    placeholder="Minimal 8 karakter"
+                    placeholder={t("registerPage.passwordPlaceholder")}
                     value={form.password}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, password: e.target.value }))
@@ -264,7 +256,7 @@ export default function RegisterPage() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
-                    aria-label="toggle password"
+                    aria-label={t("registerPage.togglePassword")}
                   >
                     {showPassword ? (
                       <EyeOff className="w-4 h-4" />
@@ -288,10 +280,8 @@ export default function RegisterPage() {
                       ))}
                     </div>
                     <div className="text-[11px] text-white/50 mt-1.5">
-                      Kekuatan password:{" "}
-                      <span className={pwStrength.textColor}>
-                        {pwStrength.label}
-                      </span>
+                      {t("registerPage.passwordStrength")}{" "}
+                      <span className={pwStrength.textColor}>{pwStrength.label}</span>
                     </div>
                   </div>
                 )}
@@ -299,7 +289,7 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-                  Konfirmasi Password
+                  {t("registerPage.confirmPasswordLabel")}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -307,7 +297,7 @@ export default function RegisterPage() {
                     type="password"
                     required
                     minLength={8}
-                    placeholder="Ulangi password"
+                    placeholder={t("registerPage.confirmPasswordPlaceholder")}
                     value={form.confirmPassword}
                     onChange={(e) =>
                       setForm((f) => ({
@@ -320,7 +310,7 @@ export default function RegisterPage() {
                 </div>
                 {form.confirmPassword.length > 0 && !passwordsMatch && (
                   <p className="text-[11px] text-red-300 mt-2">
-                    Password dan konfirmasi password harus sama.
+                    {t("registerPage.confirmPasswordMismatch")}
                   </p>
                 )}
               </div>
@@ -339,21 +329,21 @@ export default function RegisterPage() {
                   />
                 </span>
                 <span className="text-sm text-white/70 group-hover:text-white transition-colors leading-relaxed">
-                  Aku setuju sama{" "}
+                  {t("registerPage.termsPrefix")}{" "}
                   <a
                     href="#"
                     className="text-gradient-static font-semibold underline"
                   >
-                    Syarat Layanan
+                    {t("registerPage.terms")}
                   </a>{" "}
-                  dan{" "}
+                  {t("registerPage.termsAnd")}{" "}
                   <a
                     href="#"
                     className="text-gradient-static font-semibold underline"
                   >
-                    Kebijakan Privasi
-                  </a>{" "}
-                  FinKu
+                    {t("registerPage.privacy")}
+                  </a>
+                  {t("registerPage.termsSuffix") ? ` ${t("registerPage.termsSuffix")}` : ""}
                 </span>
               </label>
 
@@ -365,11 +355,11 @@ export default function RegisterPage() {
                 {loading ? (
                   <>
                     <Sparkles className="w-4 h-4 animate-spin" />
-                    Bikin akunnya...
+                    {t("registerPage.submitting")}
                   </>
                 ) : (
                   <>
-                    Mulai Cuan Sekarang
+                    {t("registerPage.submit")}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -377,12 +367,12 @@ export default function RegisterPage() {
             </form>
 
             <p className="mt-6 text-center text-sm text-white/60">
-              Udah punya akun?{" "}
+              {t("registerPage.hasAccount")}{" "}
               <Link
                 to="/login"
                 className="text-gradient-static font-bold hover:opacity-80"
               >
-                Masuk di sini →
+                {t("registerPage.loginLink")}
               </Link>
             </p>
           </div>
@@ -431,8 +421,17 @@ function Field({
   );
 }
 
-function passwordStrength(pw: string) {
-  if (!pw) return { score: 0, label: "—", color: "bg-white/10", textColor: "text-white/50" };
+type TFn = (key: string) => string;
+
+function passwordStrength(pw: string, t: TFn) {
+  if (!pw) {
+    return {
+      score: 0,
+      label: t("registerPage.passwordStrengthEmpty"),
+      color: "bg-white/10",
+      textColor: "text-white/50",
+    };
+  }
   let score = 0;
   if (pw.length >= 8) score++;
   if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
@@ -440,20 +439,42 @@ function passwordStrength(pw: string) {
   if (/[^A-Za-z0-9]/.test(pw)) score++;
 
   const map = [
-    { label: "Lemah banget 💀", color: "bg-red-500", textColor: "text-red-400" },
-    { label: "Lemah 😬", color: "bg-orange-500", textColor: "text-orange-400" },
-    { label: "Lumayan 😐", color: "bg-yellow-500", textColor: "text-yellow-400" },
-    { label: "Bagus 💪", color: "bg-neon-lime", textColor: "text-neon-lime" },
-    { label: "Mantul! 🔥", color: "bg-gradient-neon", textColor: "text-neon-pink" },
+    {
+      label: t("registerPage.passwordWeak1"),
+      color: "bg-red-500",
+      textColor: "text-red-400",
+    },
+    {
+      label: t("registerPage.passwordWeak2"),
+      color: "bg-orange-500",
+      textColor: "text-orange-400",
+    },
+    {
+      label: t("registerPage.passwordFair"),
+      color: "bg-yellow-500",
+      textColor: "text-yellow-400",
+    },
+    {
+      label: t("registerPage.passwordGood"),
+      color: "bg-neon-lime",
+      textColor: "text-neon-lime",
+    },
+    {
+      label: t("registerPage.passwordStrong"),
+      color: "bg-gradient-neon",
+      textColor: "text-neon-pink",
+    },
   ];
   return { score, ...map[score] };
 }
 
 function SocialButton({
+  label,
   loading,
   disabled,
   onClick,
 }: {
+  label: string;
   loading?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -466,7 +487,7 @@ function SocialButton({
       className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all active:scale-95 font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
     >
       {loading ? <Sparkles className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
-      Lanjut dengan Google
+      {label}
     </button>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import * as walletsApi from "@/api/wallets";
@@ -7,10 +8,14 @@ import * as catApi from "@/api/categories";
 import * as txApi from "@/api/transactions";
 import { useDataVersion } from "@/store/dataVersion";
 import { useUIStore } from "@/store/ui";
+import { getBcp47Tag } from "@/lib/locale";
 
 type Tab = "income" | "expense" | "transfer";
 
+const TABS: Tab[] = ["expense", "income", "transfer"];
+
 export default function AddTransactionModal() {
+  const { t } = useTranslation("transactions");
   const open = useUIStore((s) => s.addTransactionOpen);
   const setOpen = useUIStore((s) => s.setAddTransactionOpen);
   const bump = useDataVersion((s) => s.bump);
@@ -54,7 +59,7 @@ export default function AddTransactionModal() {
             if (def) setCategoryId(def.id);
           }
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Gagal memuat data");
+          toast.error(e instanceof Error ? e.message : t("modal.loadFailed"));
         } finally {
           setLoading(false);
         }
@@ -77,7 +82,7 @@ export default function AddTransactionModal() {
   if (!open) return null;
 
   const walletLabel = (w: walletsApi.Wallet) => {
-    const bal = w.balance.toLocaleString("id-ID");
+    const bal = w.balance.toLocaleString(getBcp47Tag());
     const gid = w.groupId ?? undefined;
     const gname = gid ? groupNameById.get(gid) : undefined;
     if (gname) return `${gname} · ${w.name} (${bal})`;
@@ -93,18 +98,18 @@ export default function AddTransactionModal() {
     e.preventDefault();
     const amt = parseAmount();
     if (amt <= 0) {
-      toast.error("Masukkan jumlah valid.");
+      toast.error(t("modal.invalidAmount"));
       return;
     }
     if (!walletId) {
-      toast.error("Pilih dompet.");
+      toast.error(t("modal.selectWallet"));
       return;
     }
     setSaving(true);
     try {
       if (tab === "transfer") {
         if (!destWalletId || destWalletId === walletId) {
-          toast.error("Pilih dompet tujuan yang berbeda.");
+          toast.error(t("modal.selectDestWallet"));
           setSaving(false);
           return;
         }
@@ -118,7 +123,7 @@ export default function AddTransactionModal() {
         });
       } else {
         if (!categoryId) {
-          toast.error("Pilih kategori.");
+          toast.error(t("modal.selectCategory"));
           setSaving(false);
           return;
         }
@@ -131,13 +136,13 @@ export default function AddTransactionModal() {
           description: description || undefined,
         });
       }
-      toast.success("Transaksi tersimpan.");
+      toast.success(t("modal.saved"));
       bump();
       setOpen(false);
       setAmount("");
       setDescription("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menyimpan");
+      toast.error(err instanceof Error ? err.message : t("modal.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -148,50 +153,50 @@ export default function AddTransactionModal() {
       <button
         type="button"
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        aria-label="Tutup"
+        aria-label={t("close")}
         onClick={() => setOpen(false)}
       />
       <div className="relative w-full max-w-lg rounded-t-3xl md:rounded-3xl border border-white/15 bg-ink-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-          <h2 className="font-display font-bold text-lg">Tambah transaksi</h2>
+          <h2 className="font-display font-bold text-lg">{t("modal.title")}</h2>
           <button type="button" onClick={() => setOpen(false)} className="p-2 rounded-xl hover:bg-white/10">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex gap-1 p-2 border-b border-white/10">
-          {(["expense", "income", "transfer"] as const).map((k) => (
+          {TABS.map((k) => (
             <button
               key={k}
               type="button"
               onClick={() => setTab(k)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-colors ${
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                 tab === k ? "bg-gradient-neon text-white shadow-neon" : "text-white/70 hover:bg-white/10"
               }`}
             >
-              {k === "transfer" ? "Transfer" : k}
+              {t(k)}
             </button>
           ))}
         </div>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
           {loading ? (
-            <p className="text-white/60 text-sm">Memuat…</p>
+            <p className="text-white/60 text-sm">{t("loading")}</p>
           ) : (
             <>
               <div>
-                <label className="block text-xs font-semibold text-white/60 mb-1.5">Jumlah (IDR)</label>
+                <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.amount")}</label>
                 <input
                   className="input"
                   inputMode="numeric"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="50000"
+                  placeholder={t("modal.amountPlaceholder")}
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-white/60 mb-1.5">Tanggal</label>
+                <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.date")}</label>
                 <input
                   type="date"
                   className="input"
@@ -201,9 +206,9 @@ export default function AddTransactionModal() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-white/60 mb-1.5">Dompet</label>
+                <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.wallet")}</label>
                 <select className="input" value={walletId} onChange={(e) => setWalletId(e.target.value)} required>
-                  <option value="">— Pilih —</option>
+                  <option value="">{t("selectPlaceholder")}</option>
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
                       {walletLabel(w)}
@@ -213,14 +218,14 @@ export default function AddTransactionModal() {
               </div>
               {tab === "transfer" ? (
                 <div>
-                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Dompet tujuan</label>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.destWallet")}</label>
                   <select
                     className="input"
                     value={destWalletId}
                     onChange={(e) => setDestWalletId(e.target.value)}
                     required
                   >
-                    <option value="">— Pilih —</option>
+                    <option value="">{t("selectPlaceholder")}</option>
                     {wallets
                       .filter((w) => w.id !== walletId)
                       .map((w) => (
@@ -232,7 +237,7 @@ export default function AddTransactionModal() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-semibold text-white/60 mb-1.5">Kategori</label>
+                  <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.category")}</label>
                   <select
                     className="input"
                     value={categoryId}
@@ -249,11 +254,11 @@ export default function AddTransactionModal() {
                 </div>
               )}
               <div>
-                <label className="block text-xs font-semibold text-white/60 mb-1.5">Catatan (opsional)</label>
+                <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.note")}</label>
                 <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
               <button type="submit" disabled={saving} className="btn-primary w-full !py-3 disabled:opacity-50">
-                {saving ? "Menyimpan…" : "Simpan"}
+                {saving ? t("saving") : t("save")}
               </button>
             </>
           )}

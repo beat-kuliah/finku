@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import AppShell from "@/components/AppShell";
 import * as goalsApi from "@/api/goals";
 import { useDataVersion } from "@/store/dataVersion";
@@ -8,6 +9,7 @@ import { formatIDR } from "@/lib/format";
 import { toast } from "sonner";
 
 export default function GoalsPage() {
+  const { t } = useTranslation("goals");
   const version = useDataVersion((s) => s.version);
   const [goals, setGoals] = useState<goalsApi.Goal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,11 +25,11 @@ export default function GoalsPage() {
       const g = await goalsApi.listGoals();
       setGoals(g.goals);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal memuat");
+      toast.error(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -38,18 +40,18 @@ export default function GoalsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const t = Number(String(target).replace(/\./g, ""));
-    if (!name.trim() || !Number.isFinite(t) || t <= 0) {
-      toast.error("Isi nama dan target valid.");
+    const targetAmount = Number(String(target).replace(/\./g, ""));
+    if (!name.trim() || !Number.isFinite(targetAmount) || targetAmount <= 0) {
+      toast.error(t("invalidForm"));
       return;
     }
     try {
       await goalsApi.createGoal({
         name: name.trim(),
-        targetAmount: t,
+        targetAmount,
         deadline: deadline || undefined,
       });
-      toast.success("Goal dibuat.");
+      toast.success(t("created"));
       setShowCreate(false);
       setName("");
       setTarget("");
@@ -57,7 +59,7 @@ export default function GoalsPage() {
       bumpData();
       void load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal");
+      toast.error(err instanceof Error ? err.message : t("failed"));
     }
   };
 
@@ -65,29 +67,29 @@ export default function GoalsPage() {
     const raw = contrib[id] ?? "";
     const amt = Number(String(raw).replace(/\./g, ""));
     if (!Number.isFinite(amt) || amt === 0) {
-      toast.error("Isi jumlah tabungan (+ atau -).");
+      toast.error(t("contributeInvalid"));
       return;
     }
     try {
       await goalsApi.contributeGoal(id, amt);
-      toast.success("Progress diperbarui.");
+      toast.success(t("progressUpdated"));
       setContrib((s) => ({ ...s, [id]: "" }));
       bumpData();
       void load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal");
+      toast.error(err instanceof Error ? err.message : t("failed"));
     }
   };
 
   return (
-    <AppShell activeSection="goals" desktopTitle="Goals" desktopSubtitle="Target tabungan">
+    <AppShell activeSection="goals" desktopTitle={t("title")} desktopSubtitle={t("subtitle")}>
       <section className="card !p-6 md:!p-7 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold">Goals</p>
-          <h1 className="font-display text-3xl font-extrabold mt-1">Target kamu</h1>
+          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold">{t("sectionLabel")}</p>
+          <h1 className="font-display text-3xl font-extrabold mt-1">{t("heading")}</h1>
         </div>
         <button type="button" className="btn-primary !py-2.5 !px-4 text-sm" onClick={() => setShowCreate(true)}>
-          Buat Goal
+          {t("createGoal")}
         </button>
       </section>
 
@@ -97,33 +99,33 @@ export default function GoalsPage() {
             onSubmit={(e) => void handleCreate(e)}
             className="card !p-6 max-w-md w-full space-y-4 border border-white/15"
           >
-            <h3 className="font-display font-bold text-lg">Goal baru</h3>
+            <h3 className="font-display font-bold text-lg">{t("newGoal")}</h3>
             <div>
-              <label className="block text-xs text-white/60 mb-1">Nama</label>
+              <label className="block text-xs text-white/60 mb-1">{t("name")}</label>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div>
-              <label className="block text-xs text-white/60 mb-1">Target (IDR)</label>
+              <label className="block text-xs text-white/60 mb-1">{t("target")}</label>
               <input className="input" value={target} onChange={(e) => setTarget(e.target.value)} required />
             </div>
             <div>
-              <label className="block text-xs text-white/60 mb-1">Deadline (opsional)</label>
+              <label className="block text-xs text-white/60 mb-1">{t("deadline")}</label>
               <input type="date" className="input" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
             </div>
             <div className="flex gap-2 justify-end">
               <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
-                Batal
+                {t("cancel")}
               </button>
               <button type="submit" className="btn-primary">
-                Simpan
+                {t("save")}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {loading && <p className="text-white/50 text-sm">Memuat…</p>}
-      {!loading && goals.length === 0 && <p className="text-white/50 text-sm">Belum ada goal.</p>}
+      {loading && <p className="text-white/50 text-sm">{t("loading")}</p>}
+      {!loading && goals.length === 0 && <p className="text-white/50 text-sm">{t("noGoals")}</p>}
 
       <section className="grid md:grid-cols-2 gap-5">
         {goals.map((g) => {
@@ -133,7 +135,9 @@ export default function GoalsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-display font-bold text-xl">{g.name}</h3>
-                  {g.deadline && <p className="text-xs text-white/50 mt-1">Deadline: {g.deadline}</p>}
+                  {g.deadline && (
+                    <p className="text-xs text-white/50 mt-1">{t("deadlineLabel", { date: g.deadline })}</p>
+                  )}
                 </div>
                 <span className="text-neon-lime font-bold">{pct}%</span>
               </div>
@@ -146,7 +150,7 @@ export default function GoalsPage() {
               <div className="flex gap-2 pt-2">
                 <input
                   className="input flex-1 !py-2 text-sm"
-                  placeholder="Tabung (+) / tarik (-)"
+                  placeholder={t("contributePlaceholder")}
                   value={contrib[g.id] ?? ""}
                   onChange={(e) => setContrib((s) => ({ ...s, [g.id]: e.target.value }))}
                 />
@@ -155,7 +159,7 @@ export default function GoalsPage() {
                   className="btn-primary !py-2 !px-3 text-sm"
                   onClick={() => void handleContribute(g.id)}
                 >
-                  Update
+                  {t("update")}
                 </button>
               </div>
             </div>

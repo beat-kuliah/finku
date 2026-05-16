@@ -1,9 +1,11 @@
 import { useEffect, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/store/auth";
 import SetUsernameModal from "@/components/SetUsernameModal";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { t } = useTranslation("common");
   const status = useAuth((s) => s.status);
   const user = useAuth((s) => s.user);
   const bootstrap = useAuth((s) => s.bootstrap);
@@ -18,7 +20,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   if (status === "idle" || status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70 text-sm">
-        Loading…
+        {t("loading")}
       </div>
     );
   }

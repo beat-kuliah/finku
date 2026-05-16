@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -21,11 +22,13 @@ import AppShell from "@/components/AppShell";
 import { fetchDashboard, type DashboardPayload } from "@/api/summary";
 import { useAuth } from "@/store/auth";
 import { useDataVersion } from "@/store/dataVersion";
+import { formatDate, formatWeekdayShort } from "@/lib/dates";
 import { formatIDR } from "@/lib/format";
 
 const COLORS = ["#00f0ff", "#2563eb", "#1d4ed8", "#38bdf8", "#7dd3fc", "#a5f3fc", "#bae6fd"];
 
 export default function DashboardPage() {
+  const { t, i18n } = useTranslation("dashboard");
   const user = useAuth((s) => s.user);
   const version = useDataVersion((s) => s.version);
   const [data, setData] = useState<DashboardPayload | null>(null);
@@ -41,21 +44,21 @@ export default function DashboardPage() {
           setErr(null);
         }
       } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : "Gagal memuat");
+        if (!cancelled) setErr(e instanceof Error ? e.message : t("loadFailed"));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [version]);
+  }, [version, t]);
 
   const trendData = useMemo(() => {
     if (!data?.dailyTrend?.length) return [];
     return data.dailyTrend.map((row) => ({
-      day: new Date(row.date + "T12:00:00").toLocaleDateString("id-ID", { weekday: "short" }),
+      day: formatWeekdayShort(row.date + "T12:00:00"),
       amount: row.expense,
     }));
-  }, [data]);
+  }, [data, i18n.language]);
 
   const categoryData = useMemo(() => {
     if (!data?.categoryBreakdown?.length) return [];
@@ -71,8 +74,10 @@ export default function DashboardPage() {
   const budgets = data?.budgets ?? [];
   const latestTx = data?.latestTransactions ?? [];
 
-  const subtitle = user?.username ? `Halo, @${user.username}` : `Halo, ${user?.name ?? "FinKu"} 👋`;
-  const today = new Date().toLocaleDateString("id-ID", {
+  const subtitle = user?.username
+    ? t("greetingUser", { username: user.username })
+    : t("greetingName", { name: user?.name ?? "FinKu" });
+  const today = formatDate(new Date(), {
     weekday: "long",
     day: "numeric",
     month: "short",
@@ -88,7 +93,7 @@ export default function DashboardPage() {
       : 0;
 
   return (
-    <AppShell activeSection="dashboard" desktopTitle="Welcome back!" desktopSubtitle={subtitle}>
+    <AppShell activeSection="dashboard" desktopTitle={t("welcomeBack")} desktopSubtitle={subtitle}>
       {err && (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           {err}
@@ -97,34 +102,34 @@ export default function DashboardPage() {
       <section className="card !p-6 md:!p-7 bg-gradient-tiktok bg-[length:200%_200%] animate-gradient-x">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">Total saldo dompet</p>
+            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">{t("totalBalance")}</p>
             <h1 className="font-display text-3xl md:text-4xl font-extrabold mt-1">
               {data ? formatIDR(data.totalBalance) : "…"}
             </h1>
             <p className="text-sm text-white/80 mt-2">{today}</p>
             <Link to="/wallets" className="btn-ghost !px-0 text-sm mt-3 inline-flex">
-              Detail dompet
+              {t("walletDetails")}
             </Link>
           </div>
           <div className="chip !bg-white/20 !border-white/30 !text-white">
             <Flame className="w-3.5 h-3.5" />
-            Ringkasan bulan berjalan
+            {t("monthSummary")}
           </div>
         </div>
         <div className="grid sm:grid-cols-3 gap-3 mt-5">
           <StatMini
             icon={<ArrowUpRight className="w-4 h-4" />}
-            label="Income (periode)"
+            label={t("incomePeriod")}
             value={data ? formatIDR(data.periodIncome) : "…"}
           />
           <StatMini
             icon={<ArrowDownRight className="w-4 h-4" />}
-            label="Expense (periode)"
+            label={t("expensePeriod")}
             value={data ? formatIDR(data.periodExpense) : "…"}
           />
           <StatMini
             icon={<Wallet className="w-4 h-4" />}
-            label="Sisa budget (est.)"
+            label={t("budgetRemaining")}
             value={data ? formatIDR(sisaBudget) : "…"}
           />
         </div>
@@ -133,8 +138,8 @@ export default function DashboardPage() {
       <section className="grid lg:grid-cols-3 gap-5">
         <div className="card lg:col-span-2 !p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-bold text-xl">Trend Pengeluaran</h2>
-            <span className="chip">Periode ini</span>
+            <h2 className="font-display font-bold text-xl">{t("expenseTrend")}</h2>
+            <span className="chip">{t("thisPeriod")}</span>
           </div>
           <div className="h-64">
             {trendData.length > 0 ? (
@@ -154,20 +159,20 @@ export default function DashboardPage() {
                       background: "rgba(11, 18, 32, 0.9)",
                       color: "#e6f7ff",
                     }}
-                    formatter={(value: number) => [formatIDR(value), "Pengeluaran"]}
+                    formatter={(value: number) => [formatIDR(value), t("expense")]}
                   />
                   <Area type="monotone" dataKey="amount" stroke="#00f0ff" strokeWidth={3} fill="url(#areaGlow)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-white/50 text-sm h-full flex items-center justify-center">Belum ada data pengeluaran.</p>
+              <p className="text-white/50 text-sm h-full flex items-center justify-center">{t("noExpenseData")}</p>
             )}
           </div>
         </div>
 
         <div className="card !p-6">
-          <h2 className="font-display font-bold text-xl">Kategori</h2>
-          <p className="text-white/60 text-sm mt-1">Porsi pengeluaran (periode)</p>
+          <h2 className="font-display font-bold text-xl">{t("categories")}</h2>
+          <p className="text-white/60 text-sm mt-1">{t("categoryShare")}</p>
           <div className="h-48 mt-3">
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -187,7 +192,7 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-white/50 text-sm text-center pt-16">Belum ada pengeluaran terkategori.</p>
+              <p className="text-white/50 text-sm text-center pt-16">{t("noCategoryData")}</p>
             )}
           </div>
           <div className="space-y-2 mt-2">
@@ -207,13 +212,13 @@ export default function DashboardPage() {
       <section className="grid lg:grid-cols-2 gap-5">
         <div className="card !p-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-display font-bold text-xl">Budget Tracker</h2>
+            <h2 className="font-display font-bold text-xl">{t("budgetTracker")}</h2>
             <Link to="/budget" className="btn-ghost !px-0 text-sm">
-              Kelola
+              {t("manage")}
             </Link>
           </div>
           <div className="space-y-4 mt-4">
-            {budgets.length === 0 && <p className="text-white/50 text-sm">Belum ada budget.</p>}
+            {budgets.length === 0 && <p className="text-white/50 text-sm">{t("noBudgets")}</p>}
             {budgets.map((item) => {
               const pct = item.limitAmount > 0 ? Math.min(100, Math.round((item.spent / item.limitAmount) * 100)) : 0;
               const over = item.spent > item.limitAmount;
@@ -233,7 +238,7 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-xs text-white/60 mt-2">
                     {formatIDR(item.spent)} / {formatIDR(item.limitAmount)}
-                    {item.paused ? " · dijeda" : ""}
+                    {item.paused ? t("paused") : ""}
                   </p>
                 </div>
               );
@@ -244,17 +249,25 @@ export default function DashboardPage() {
         <div className="space-y-5">
           <div className="card !p-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display font-bold text-xl">Transaksi Terbaru</h2>
+              <h2 className="font-display font-bold text-xl">{t("latestTransactions")}</h2>
               <Link to="/transactions" className="btn-ghost !px-0 text-sm">
-                Lihat semua
+                {t("viewAll")}
               </Link>
             </div>
             <div className="space-y-2.5">
-              {latestTx.length === 0 && <p className="text-white/50 text-sm">Belum ada transaksi.</p>}
+              {latestTx.length === 0 && <p className="text-white/50 text-sm">{t("noTransactions")}</p>}
               {latestTx.map((tx) => {
                 const isIncome = tx.kind === "income";
                 const isTransfer = tx.kind === "transfer";
-                const label = tx.description || (isTransfer ? "Transfer" : tx.category || tx.kind);
+                const label = tx.description || (isTransfer ? t("transfer") : tx.category || tx.kind);
+                const kindLabel =
+                  tx.kind === "income"
+                    ? t("kindIncome")
+                    : tx.kind === "expense"
+                      ? t("kindExpense")
+                      : tx.kind === "transfer"
+                        ? t("kindTransfer")
+                        : tx.kind;
                 return (
                   <div key={tx.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
                     <div className="w-10 h-10 rounded-xl bg-white/10 grid place-items-center text-lg">
@@ -262,7 +275,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{label}</p>
-                      <p className="text-xs text-white/50">{tx.kind}</p>
+                      <p className="text-xs text-white/50">{kindLabel}</p>
                     </div>
                     <p className={`text-sm font-bold ${isIncome ? "text-neon-lime" : "text-white"}`}>
                       {isIncome ? "+" : isTransfer ? "" : "-"}
@@ -276,11 +289,9 @@ export default function DashboardPage() {
 
           <div className="card !p-6 bg-gradient-cyber">
             <div className="chip !bg-white/20 !border-white/30 !text-white mb-3 w-fit">
-              <Sparkles className="w-3.5 h-3.5" /> Insight
+              <Sparkles className="w-3.5 h-3.5" /> {t("insightChip")}
             </div>
-            <p className="font-semibold text-lg leading-relaxed text-white/90">
-              Pantau budget per kategori di halaman Budget. Transfer antar dompet tidak memakan limit kategori.
-            </p>
+            <p className="font-semibold text-lg leading-relaxed text-white/90">{t("insightText")}</p>
           </div>
         </div>
       </section>

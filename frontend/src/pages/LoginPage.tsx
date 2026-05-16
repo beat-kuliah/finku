@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AuthApiError, useAuth } from "@/store/auth";
 import { motion } from "framer-motion";
 import {
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 const REMEMBER_KEY = "finku-remember-identifier";
 
 export default function LoginPage() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const login = useAuth((s) => s.login);
   const loginWithGoogle = useAuth((s) => s.loginWithGoogle);
@@ -33,6 +35,12 @@ export default function LoginPage() {
     typeof window !== "undefined" ? !!window.localStorage.getItem(REMEMBER_KEY) : false,
   );
 
+  const brandStats = [
+    { e: "🔥", l: t("loginPage.statStreak") },
+    { e: "💎", l: t("loginPage.statPremium") },
+    { e: "📊", l: t("loginPage.statInsights") },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -43,21 +51,19 @@ export default function LoginPage() {
       } else {
         window.localStorage.removeItem(REMEMBER_KEY);
       }
-      toast.success("Berhasil masuk. Yuk lanjut!");
+      toast.success(t("login.success"));
       navigate("/dashboard", { replace: true });
     } catch (err) {
       if (err instanceof AuthApiError) {
         if (err.status === 429) {
-          toast.error("Terlalu banyak percobaan. Coba lagi nanti.");
+          toast.error(t("login.tooManyAttempts"));
         } else if (err.status === 423) {
-          toast.error(
-            "Akun terkunci sementara karena terlalu banyak gagal login. Coba lagi dalam 15 menit.",
-          );
+          toast.error(t("login.accountLocked"));
         } else {
           toast.error(err.message);
         }
       } else {
-        toast.error("Gagal menghubungi server. Pastikan backend jalan.");
+        toast.error(t("login.serverError"));
       }
     } finally {
       setLoading(false);
@@ -69,10 +75,10 @@ export default function LoginPage() {
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
-      toast.success("Berhasil masuk lewat Google.");
+      toast.success(t("login.googleSuccess"));
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Login Google gagal.";
+      const msg = err instanceof Error ? err.message : t("login.googleFailed");
       toast.error(msg);
     } finally {
       setOauthLoading(null);
@@ -83,30 +89,23 @@ export default function LoginPage() {
     <div className="relative min-h-screen flex">
       <BlobBackground />
 
-      {/* LEFT - Brand panel (hidden on mobile) */}
       <aside className="hidden lg:flex flex-col justify-between w-[45%] xl:w-[50%] p-10 relative">
         <Logo size="md" />
 
         <div className="space-y-6 max-w-md">
           <div className="chip">
             <Flame className="w-3.5 h-3.5 text-neon-lime" />
-            <span>Welcome back, bestie</span>
+            <span>{t("loginPage.brandChip")}</span>
           </div>
           <h1 className="font-display font-extrabold text-5xl xl:text-6xl leading-[1.05] text-balance">
-            Lanjutin <span className="text-gradient">glow up</span> finansial
-            kamu
+            {t("loginPage.brandTitlePrefix")}{" "}
+            <span className="text-gradient">{t("loginPage.brandTitleHighlight")}</span>{" "}
+            {t("loginPage.brandTitleSuffix")}
           </h1>
-          <p className="text-white/60 text-lg">
-            Saldo, budget, dan goals kamu udah nungguin. Login sekarang dan
-            lanjutin streak nabung! 🔥
-          </p>
+          <p className="text-white/60 text-lg">{t("loginPage.brandSubtitle")}</p>
 
           <div className="grid grid-cols-3 gap-3 mt-8">
-            {[
-              { e: "🔥", l: "7 day streak" },
-              { e: "💎", l: "Premium vibes" },
-              { e: "📊", l: "Smart insights" },
-            ].map((i) => (
+            {brandStats.map((i) => (
               <div key={i.l} className="card !p-4 text-center">
                 <div className="text-2xl mb-1">{i.e}</div>
                 <div className="text-xs text-white/70">{i.l}</div>
@@ -115,12 +114,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="text-xs text-white/40">
-          © 2026 FinKu — made with 💙 for Gen Z
-        </div>
+        <div className="text-xs text-white/40">{t("loginPage.copyright")}</div>
       </aside>
 
-      {/* RIGHT - Form panel */}
       <main className="flex-1 flex items-center justify-center p-5 md:p-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -135,12 +131,8 @@ export default function LoginPage() {
           <div className="card !p-7 md:!p-9">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="font-display font-extrabold text-3xl">
-                  Masuk dulu yuk 👋
-                </h2>
-                <p className="text-sm text-white/60 mt-1">
-                  Selamat datang balik, kangen kami gak?
-                </p>
+                <h2 className="font-display font-extrabold text-3xl">{t("loginPage.title")}</h2>
+                <p className="text-sm text-white/60 mt-1">{t("loginPage.subtitle")}</p>
               </div>
             </div>
 
@@ -148,20 +140,21 @@ export default function LoginPage() {
               <>
                 <div className="mb-5">
                   <SocialButton
+                    label={t("loginPage.googleButton")}
                     loading={oauthLoading === "google"}
                     disabled={oauthLoading !== null}
                     onClick={handleGoogle}
                   />
                 </div>
 
-                <div className="divider-or mb-5">atau</div>
+                <div className="divider-or mb-5">{t("loginPage.dividerOr")}</div>
               </>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-                  Email atau Username
+                  {t("loginPage.identifierLabel")}
                 </label>
                 <div className="relative">
                   <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -169,7 +162,7 @@ export default function LoginPage() {
                     type="text"
                     required
                     autoComplete="username"
-                    placeholder="kamu@email.com / username"
+                    placeholder={t("loginPage.identifierPlaceholder")}
                     value={form.identifier}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, identifier: e.target.value }))
@@ -182,16 +175,14 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
-                    Password
+                    {t("loginPage.passwordLabel")}
                   </label>
                   <button
                     type="button"
-                    onClick={() =>
-                      toast.message("Reset password via email belum diaktifkan — hubungi support atau gunakan Google.")
-                    }
+                    onClick={() => toast.message(t("loginPage.forgotPasswordMessage"))}
                     className="text-xs text-neon-pink hover:text-neon-purple font-semibold transition-colors"
                   >
-                    Lupa password?
+                    {t("loginPage.forgotPassword")}
                   </button>
                 </div>
                 <div className="relative">
@@ -210,7 +201,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
-                    aria-label="toggle password"
+                    aria-label={t("loginPage.togglePassword")}
                   >
                     {showPassword ? (
                       <EyeOff className="w-4 h-4" />
@@ -240,7 +231,7 @@ export default function LoginPage() {
                   </svg>
                 </span>
                 <span className="text-sm text-white/70 group-hover:text-white transition-colors">
-                  Inget aku, jangan logout
+                  {t("loginPage.rememberMe")}
                 </span>
               </label>
 
@@ -252,11 +243,11 @@ export default function LoginPage() {
                 {loading ? (
                   <>
                     <Sparkles className="w-4 h-4 animate-spin" />
-                    Lagi masuk...
+                    {t("loginPage.submitting")}
                   </>
                 ) : (
                   <>
-                    Masuk sekarang
+                    {t("loginPage.submit")}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -264,26 +255,26 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-6 text-center text-sm text-white/60">
-              Belum punya akun?{" "}
+              {t("loginPage.noAccount")}{" "}
               <Link
                 to="/register"
                 className="text-gradient-static font-bold hover:opacity-80"
               >
-                Daftar gratis →
+                {t("loginPage.signUpLink")}
               </Link>
             </p>
           </div>
 
           <p className="mt-5 text-center text-xs text-white/40 max-w-sm mx-auto">
-            Dengan masuk, kamu setuju sama{" "}
+            {t("loginPage.termsPrefix")}{" "}
             <a href="#" className="underline hover:text-white/70">
-              Syarat
+              {t("loginPage.terms")}
             </a>{" "}
-            dan{" "}
+            {t("loginPage.termsAnd")}{" "}
             <a href="#" className="underline hover:text-white/70">
-              Kebijakan Privasi
+              {t("loginPage.privacy")}
             </a>{" "}
-            kami.
+            {t("loginPage.termsSuffix")}
           </p>
         </motion.div>
       </main>
@@ -292,10 +283,12 @@ export default function LoginPage() {
 }
 
 function SocialButton({
+  label,
   loading,
   disabled,
   onClick,
 }: {
+  label: string;
   loading?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -308,7 +301,7 @@ function SocialButton({
       className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all active:scale-95 font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
     >
       {loading ? <Sparkles className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
-      Lanjut dengan Google
+      {label}
     </button>
   );
 }

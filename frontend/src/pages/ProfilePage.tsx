@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Bell,
   Moon,
@@ -15,6 +16,7 @@ import {
   Sparkles,
   Eye,
   EyeOff,
+  Languages,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { useTheme } from "@/lib/theme";
@@ -25,13 +27,18 @@ import { ApiError } from "@/lib/api";
 import * as prefApi from "@/api/preferences";
 import * as catApi from "@/api/categories";
 import * as accountApi from "@/api/account";
+import i18n from "@/i18n";
+import { getLocale, setLocale, type AppLocale } from "@/lib/locale";
 
-const PROVIDER_LABELS: Record<string, string> = {
-  password: "Email & Password",
-  google: "Google",
-};
+function providerLabel(key: string, t: (key: string) => string): string {
+  if (key === "password") return t("providerPassword");
+  if (key === "google") return t("providerGoogle");
+  return key;
+}
 
 export default function ProfilePage() {
+  const { t, i18n: i18nInst } = useTranslation("profile");
+  const appLocale: AppLocale = i18nInst.language?.startsWith("en") ? "en" : "id";
   const { isDarkMode, toggleDarkMode, setTheme } = useTheme();
   const user = useAuth((s) => s.user);
   const setUsername = useAuth((s) => s.setUsername);
@@ -125,10 +132,21 @@ export default function ProfilePage() {
     };
   }, [user, setTheme]);
 
+  const handleLocaleChange = (next: AppLocale) => {
+    if (next === getLocale()) return;
+    setLocale(next);
+    void i18n.changeLanguage(next);
+    toast.success(
+      t("languageChanged", {
+        language: t(next === "id" ? "languageId" : "languageEn"),
+      }),
+    );
+  };
+
   if (!user) {
     return (
-      <AppShell activeSection="profile" desktopTitle="Profile" desktopSubtitle="">
-        <div className="card !p-8 text-center text-white/60">Memuat profil…</div>
+      <AppShell activeSection="profile" desktopTitle={t("sectionLabel")} desktopSubtitle="">
+        <div className="card !p-8 text-center text-white/60">{t("loading")}</div>
       </AppShell>
     );
   }
@@ -140,9 +158,9 @@ export default function ProfilePage() {
     setUsernameSaving(true);
     try {
       await setUsername(usernameDraft.trim());
-      toast.success("Username tersimpan.");
+      toast.success(t("usernameSaved"));
     } catch (err) {
-      toast.error(err instanceof AuthApiError ? err.message : "Gagal menyimpan");
+      toast.error(err instanceof AuthApiError ? err.message : t("saveFailed"));
     } finally {
       setUsernameSaving(false);
     }
@@ -151,11 +169,11 @@ export default function ProfilePage() {
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pwForm.newPassword.length < 8) {
-      toast.error("Password baru minimal 8 karakter.");
+      toast.error(t("passwordMinError"));
       return;
     }
     if (pwForm.newPassword !== pwForm.confirmNewPassword) {
-      toast.error("Konfirmasi password tidak cocok.");
+      toast.error(t("passwordMismatch"));
       return;
     }
     setPwSaving(true);
@@ -165,25 +183,24 @@ export default function ProfilePage() {
         newPassword: pwForm.newPassword,
         confirmNewPassword: pwForm.confirmNewPassword,
       });
-      toast.success("Password berhasil disimpan.");
+      toast.success(t("passwordSaved"));
       setPwForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
     } catch (err) {
-      toast.error(err instanceof AuthApiError ? err.message : "Gagal menyimpan");
+      toast.error(err instanceof AuthApiError ? err.message : t("saveFailed"));
     } finally {
       setPwSaving(false);
     }
   };
 
   const handleUnlink = async (provider: string) => {
-    if (!confirm(`Lepas akun ${PROVIDER_LABELS[provider] ?? provider}?`)) return;
+    const label = providerLabel(provider, t);
+    if (!confirm(t("unlinkConfirm", { provider: label }))) return;
     setIdentityBusy(provider);
     try {
       await unlinkProvider(provider);
-      toast.success(
-        `${PROVIDER_LABELS[provider] ?? provider} berhasil dilepas dari akun.`,
-      );
+      toast.success(t("unlinked", { provider: label }));
     } catch (err) {
-      toast.error(err instanceof AuthApiError ? err.message : "Gagal melepas akun");
+      toast.error(err instanceof AuthApiError ? err.message : t("unlinkFailed"));
     } finally {
       setIdentityBusy(null);
     }
@@ -206,14 +223,14 @@ export default function ProfilePage() {
         theme: isDarkMode ? "dark" : "light",
       });
       window.localStorage.setItem("finku-biometric", prefs.biometric ? "1" : "0");
-      toast.success("Preferensi tersimpan.");
+      toast.success(t("saved"));
     } catch (err) {
       toast.error(
         err instanceof AuthApiError || err instanceof ApiError
           ? err.message
           : err instanceof Error
             ? err.message
-            : "Gagal menyimpan",
+            : t("saveFailed"),
       );
     } finally {
       setSaveBusy(false);
@@ -225,9 +242,9 @@ export default function ProfilePage() {
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
-      toast.success("Google berhasil dihubungkan.");
+      toast.success(t("googleLinked"));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal hubungkan Google";
+      const msg = err instanceof Error ? err.message : t("googleLinkFailed");
       toast.error(msg);
     } finally {
       setIdentityBusy(null);
@@ -237,8 +254,8 @@ export default function ProfilePage() {
   return (
     <AppShell
       activeSection="profile"
-      desktopTitle="Profile & preferences"
-      desktopSubtitle="Akun kamu"
+      desktopTitle={t("title")}
+      desktopSubtitle={t("subtitle")}
       rightAction={
         <button
           type="button"
@@ -247,24 +264,24 @@ export default function ProfilePage() {
           className="btn-primary !px-4 !py-2 text-sm disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
-          {saveBusy ? "Menyimpan…" : "Simpan"}
+          {saveBusy ? t("saving") : t("save")}
         </button>
       }
     >
       <section className="card !p-6 md:!p-7 bg-gradient-tiktok bg-[length:200%_200%] animate-gradient-x">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">Profile</p>
-            <h1 className="font-display text-3xl md:text-4xl font-extrabold mt-1">
-              Halo, {user.name}
-            </h1>
-            <p className="text-sm text-white/80 mt-2">
-              Kelola profil, password, dan akun terhubung di sini.
+            <p className="text-xs uppercase tracking-wider text-white/80 font-semibold">
+              {t("sectionLabel")}
             </p>
+            <h1 className="font-display text-3xl md:text-4xl font-extrabold mt-1">
+              {t("greeting", { name: user.name })}
+            </h1>
+            <p className="text-sm text-white/80 mt-2">{t("manageHint")}</p>
           </div>
           <div className="chip !bg-white/20 !border-white/30 !text-white">
             <Check className="w-3.5 h-3.5" />
-            {user.username ? `@${user.username}` : "Belum ada username"}
+            {user.username ? `@${user.username}` : t("noUsername")}
           </div>
         </div>
       </section>
@@ -273,27 +290,27 @@ export default function ProfilePage() {
         <div className="card !p-6 space-y-4">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-neon-pink" />
-            <h2 className="font-display font-bold text-xl">Profil</h2>
+            <h2 className="font-display font-bold text-xl">{t("profileSection")}</h2>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-              Nama
+              {t("name")}
             </label>
             <input className="input" value={user.name} readOnly disabled />
-            <p className="text-[11px] text-white/40 mt-1">Nama belum bisa diubah dari sini.</p>
+            <p className="text-[11px] text-white/40 mt-1">{t("nameReadonly")}</p>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-              Email
+              {t("email")}
             </label>
             <input className="input" value={user.email} readOnly disabled />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-              Username
+              {t("username")}
             </label>
             <div className="relative">
               <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -304,7 +321,7 @@ export default function ProfilePage() {
                 onChange={(e) => {
                   setUsernameDraft(e.target.value.replace(/\s/g, ""));
                 }}
-                placeholder="username_kamu"
+                placeholder={t("usernamePlaceholder")}
                 spellCheck={false}
               />
             </div>
@@ -319,11 +336,11 @@ export default function ProfilePage() {
             >
               {usernameSaving ? (
                 <>
-                  <Sparkles className="w-3.5 h-3.5 animate-spin" /> Menyimpan...
+                  <Sparkles className="w-3.5 h-3.5 animate-spin" /> {t("saving")}
                 </>
               ) : (
                 <>
-                  <Save className="w-3.5 h-3.5" /> Simpan username
+                  <Save className="w-3.5 h-3.5" /> {t("saveUsername")}
                 </>
               )}
             </button>
@@ -334,44 +351,45 @@ export default function ProfilePage() {
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-neon-pink" />
             <h2 className="font-display font-bold text-xl">
-              {hasPassword ? "Ganti Password" : "Set Password"}
+              {hasPassword ? t("passwordSection") : t("setPasswordSection")}
             </h2>
           </div>
           <p className="text-xs text-white/60">
-            {hasPassword
-              ? "Masukkan password lama untuk konfirmasi, lalu password baru."
-              : "Akun kamu belum punya password (login via social). Set sekarang biar bisa login pakai email/username juga."}
+            {hasPassword ? t("passwordHintHas") : t("passwordHintNo")}
           </p>
 
           <form onSubmit={handleSavePassword} className="space-y-3">
             {hasPassword && (
               <PasswordField
-                label="Password lama"
+                label={t("currentPassword")}
                 value={pwForm.currentPassword}
                 show={showPw}
                 onToggleShow={() => setShowPw((v) => !v)}
                 onChange={(v) => setPwForm((s) => ({ ...s, currentPassword: v }))}
                 placeholder="••••••••"
                 autoComplete="current-password"
+                toggleAriaLabel={t("togglePasswordAria")}
               />
             )}
             <PasswordField
-              label="Password baru"
+              label={t("newPassword")}
               value={pwForm.newPassword}
               show={showPw}
               onToggleShow={() => setShowPw((v) => !v)}
               onChange={(v) => setPwForm((s) => ({ ...s, newPassword: v }))}
-              placeholder="Minimal 8 karakter"
+              placeholder={t("passwordMin")}
               autoComplete="new-password"
+              toggleAriaLabel={t("togglePasswordAria")}
             />
             <PasswordField
-              label="Konfirmasi password baru"
+              label={t("confirmPassword")}
               value={pwForm.confirmNewPassword}
               show={showPw}
               onToggleShow={() => setShowPw((v) => !v)}
               onChange={(v) => setPwForm((s) => ({ ...s, confirmNewPassword: v }))}
-              placeholder="Ulangi password baru"
+              placeholder={t("repeatPassword")}
               autoComplete="new-password"
+              toggleAriaLabel={t("togglePasswordAria")}
             />
             <button
               type="submit"
@@ -380,11 +398,11 @@ export default function ProfilePage() {
             >
               {pwSaving ? (
                 <>
-                  <Sparkles className="w-3.5 h-3.5 animate-spin" /> Menyimpan...
+                  <Sparkles className="w-3.5 h-3.5 animate-spin" /> {t("saving")}
                 </>
               ) : (
                 <>
-                  <Save className="w-3.5 h-3.5" /> Simpan password
+                  <Save className="w-3.5 h-3.5" /> {t("savePassword")}
                 </>
               )}
             </button>
@@ -396,11 +414,9 @@ export default function ProfilePage() {
         <div className="card !p-6 space-y-4">
           <div className="flex items-center gap-2">
             <LinkIcon className="w-4 h-4 text-neon-pink" />
-            <h2 className="font-display font-bold text-xl">Akun terhubung</h2>
+            <h2 className="font-display font-bold text-xl">{t("linkedAccounts")}</h2>
           </div>
-          <p className="text-xs text-white/60">
-            Hubungkan akun supaya bisa login lewat berbagai cara.
-          </p>
+          <p className="text-xs text-white/60">{t("linkedHint")}</p>
 
           <div className="space-y-2">
             <ProviderRow
@@ -424,33 +440,35 @@ export default function ProfilePage() {
         <div className="card !p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-neon-pink" />
-            <h2 className="font-display font-bold text-xl">Preferensi Finansial</h2>
+            <h2 className="font-display font-bold text-xl">{t("financialPrefs")}</h2>
           </div>
-          <p className="text-xs text-white/60">Disimpan lewat tombol Simpan di header.</p>
+          <p className="text-xs text-white/60">{t("financialHint")}</p>
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-              Pendapatan bulanan (IDR)
+              {t("monthlyIncome")}
             </label>
             <input
               className="input"
               value={fin.monthlyIncome}
               onChange={(e) => setFin((s) => ({ ...s, monthlyIncome: e.target.value }))}
-              placeholder="Opsional"
+              placeholder={t("optional")}
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
-              Payday (1–31)
+              {t("payday")}
             </label>
             <input
               className="input"
               value={fin.payday}
               onChange={(e) => setFin((s) => ({ ...s, payday: e.target.value }))}
-              placeholder="Opsional"
+              placeholder={t("optional")}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">Currency</label>
+            <label className="block text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
+              {t("currency")}
+            </label>
             <input
               className="input"
               value={fin.currency}
@@ -462,27 +480,27 @@ export default function ProfilePage() {
       </section>
 
       <section className="card !p-6 space-y-4">
-        <h2 className="font-display font-bold text-xl">Kategori</h2>
+        <h2 className="font-display font-bold text-xl">{t("categories")}</h2>
         <div className="flex gap-2">
           <button
             type="button"
             className={`btn-secondary !py-1.5 !px-3 text-xs ${catTab === "active" ? "ring-1 ring-neon-cyan" : ""}`}
             onClick={() => setCatTab("active")}
           >
-            Aktif
+            {t("active")}
           </button>
           <button
             type="button"
             className={`btn-secondary !py-1.5 !px-3 text-xs ${catTab === "archived" ? "ring-1 ring-neon-cyan" : ""}`}
             onClick={() => setCatTab("archived")}
           >
-            Diarsipkan
+            {t("archived")}
           </button>
         </div>
         <div className="flex flex-wrap gap-2 items-end">
           <input
             className="input flex-1 min-w-[140px]"
-            placeholder="Nama kategori"
+            placeholder={t("categoryName")}
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value)}
           />
@@ -491,8 +509,8 @@ export default function ProfilePage() {
             value={newCatKind}
             onChange={(e) => setNewCatKind(e.target.value as "income" | "expense")}
           >
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
+            <option value="expense">{t("kindExpense")}</option>
+            <option value="income">{t("kindIncome")}</option>
           </select>
           <button
             type="button"
@@ -506,13 +524,13 @@ export default function ProfilePage() {
                 const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
                 setCatsActive(ca.categories.filter((x) => !x.archivedAt));
                 setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
-                toast.success("Kategori ditambahkan.");
+                toast.success(t("categoryAdded"));
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Gagal");
+                toast.error(e instanceof Error ? e.message : t("failed"));
               }
             }}
           >
-            Tambah
+            {t("addCategory")}
           </button>
         </div>
         <ul className="space-y-2 text-sm max-h-56 overflow-y-auto">
@@ -520,7 +538,10 @@ export default function ProfilePage() {
             <li key={c.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
               <span>
                 {c.icon ? `${c.icon} ` : ""}
-                {c.name} <span className="text-white/50">({c.kind})</span>
+                {c.name}{" "}
+                <span className="text-white/50">
+                  ({c.kind === "income" ? t("kindIncome") : t("kindExpense")})
+                </span>
               </span>
               {catTab === "active" ? (
                 <button
@@ -532,13 +553,13 @@ export default function ProfilePage() {
                       const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
                       setCatsActive(ca.categories.filter((x) => !x.archivedAt));
                       setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
-                      toast.success("Kategori diarsipkan.");
+                      toast.success(t("categoryArchived"));
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Gagal");
+                      toast.error(e instanceof Error ? e.message : t("failed"));
                     }
                   }}
                 >
-                  Arsipkan
+                  {t("archiveCategory")}
                 </button>
               ) : (
                 <button
@@ -550,13 +571,13 @@ export default function ProfilePage() {
                       const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
                       setCatsActive(ca.categories.filter((x) => !x.archivedAt));
                       setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
-                      toast.success("Kategori dipulihkan.");
+                      toast.success(t("categoryRestored"));
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Gagal");
+                      toast.error(e instanceof Error ? e.message : t("failed"));
                     }
                   }}
                 >
-                  Batalkan arsip
+                  {t("restoreCategory")}
                 </button>
               )}
             </li>
@@ -568,24 +589,24 @@ export default function ProfilePage() {
         <div className="card !p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-neon-pink" />
-            <h2 className="font-display font-bold text-xl">Notifikasi</h2>
+            <h2 className="font-display font-bold text-xl">{t("notifications")}</h2>
           </div>
 
           <SwitchRow
-            title="Budget warning"
-            desc="Kasih peringatan kalau spending hampir lewat limit."
+            title={t("budgetWarning")}
+            desc={t("budgetWarningDesc")}
             checked={prefs.pushBudgetWarning}
             onChange={(checked) => setPrefs((s) => ({ ...s, pushBudgetWarning: checked }))}
           />
           <SwitchRow
-            title="Reminder catat transaksi"
-            desc="Pengingat harian buat update pengeluaran kamu."
+            title={t("reminder")}
+            desc={t("reminderDesc")}
             checked={prefs.pushReminder}
             onChange={(checked) => setPrefs((s) => ({ ...s, pushReminder: checked }))}
           />
           <SwitchRow
-            title="Weekly report"
-            desc="Kirim rangkuman finansial tiap Minggu malam."
+            title={t("weeklyReport")}
+            desc={t("weeklyReportDesc")}
             checked={prefs.weeklyReport}
             onChange={(checked) => setPrefs((s) => ({ ...s, weeklyReport: checked }))}
           />
@@ -594,37 +615,59 @@ export default function ProfilePage() {
         <div className="card !p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-neon-pink" />
-            <h2 className="font-display font-bold text-xl">Keamanan & Tampilan</h2>
+            <h2 className="font-display font-bold text-xl">{t("securityDisplay")}</h2>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Languages className="w-4 h-4 text-neon-pink" />
+              <p className="font-semibold">{t("language")}</p>
+            </div>
+            <p className="text-xs text-white/60">{t("languageDesc")}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`btn-secondary !py-1.5 !px-3 text-xs flex-1 ${appLocale === "id" ? "ring-1 ring-neon-cyan" : ""}`}
+                onClick={() => handleLocaleChange("id")}
+              >
+                {t("languageId")}
+              </button>
+              <button
+                type="button"
+                className={`btn-secondary !py-1.5 !px-3 text-xs flex-1 ${appLocale === "en" ? "ring-1 ring-neon-cyan" : ""}`}
+                onClick={() => handleLocaleChange("en")}
+              >
+                {t("languageEn")}
+              </button>
+            </div>
           </div>
 
           <SwitchRow
-            title="Dark mode"
-            desc="Gunakan tema gelap sebagai tampilan utama."
+            title={t("darkMode")}
+            desc={t("darkModeDesc")}
             checked={isDarkMode}
             onChange={toggleDarkMode}
             icon={<Moon className="w-4 h-4 text-white/60" />}
           />
           <SwitchRow
-            title="Biometric lock"
-            desc="Minta Face ID / Fingerprint saat buka app."
+            title={t("biometric")}
+            desc={t("biometricDesc")}
             checked={prefs.biometric}
             onChange={(checked) => setPrefs((s) => ({ ...s, biometric: checked }))}
             icon={<Smartphone className="w-4 h-4 text-white/60" />}
           />
 
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 mt-4">
-            <p className="font-semibold text-red-300">Danger Zone</p>
-            <p className="text-xs text-red-200/80 mt-1">
-              Reset semua data transaksi dan budget (aksi permanen).
-            </p>
+            <p className="font-semibold text-red-300">{t("dangerZone")}</p>
+            <p className="text-xs text-red-200/80 mt-1">{t("dangerDesc")}</p>
             <button
               type="button"
               className="mt-3 px-3 py-2 rounded-xl text-sm font-semibold border border-red-400/40 text-red-200 hover:bg-red-500/20 transition-colors"
               onClick={async () => {
-                if (!confirm("Hapus semua transaksi, budget, goals, kategori & dompet lalu buat ulang default?")) return;
+                if (!confirm(t("resetConfirm"))) return;
                 try {
                   await accountApi.resetFinancialData();
-                  toast.success("Data finansial direset.");
+                  toast.success(t("resetSuccess"));
                   const [ca, cz] = await Promise.all([
                     catApi.listCategories(false),
                     catApi.listCategories(true),
@@ -632,11 +675,11 @@ export default function ProfilePage() {
                   setCatsActive(ca.categories.filter((x) => !x.archivedAt));
                   setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Gagal reset");
+                  toast.error(e instanceof Error ? e.message : t("resetFailed"));
                 }
               }}
             >
-              Reset Data
+              {t("resetData")}
             </button>
           </div>
         </div>
@@ -653,6 +696,7 @@ function PasswordField({
   onToggleShow,
   placeholder,
   autoComplete,
+  toggleAriaLabel,
 }: {
   label: string;
   value: string;
@@ -661,6 +705,7 @@ function PasswordField({
   onToggleShow: () => void;
   placeholder?: string;
   autoComplete?: string;
+  toggleAriaLabel: string;
 }) {
   return (
     <div>
@@ -681,7 +726,7 @@ function PasswordField({
           type="button"
           onClick={onToggleShow}
           className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
-          aria-label="toggle password"
+          aria-label={toggleAriaLabel}
         >
           {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
@@ -703,13 +748,14 @@ function ProviderRow({
   onLink?: () => void;
   onUnlink: () => void;
 }) {
-  const label = PROVIDER_LABELS[providerKey] ?? providerKey;
+  const { t } = useTranslation("profile");
+  const label = providerLabel(providerKey, t);
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center justify-between gap-3">
       <div>
         <p className="font-semibold">{label}</p>
         <p className="text-xs text-white/60">
-          {connected ? "Tersambung" : "Belum terhubung"}
+          {connected ? t("connected") : t("notConnected")}
         </p>
       </div>
       {connected ? (
@@ -722,7 +768,7 @@ function ProviderRow({
             <Sparkles className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <span className="inline-flex items-center gap-1.5">
-              <Unlink className="w-3.5 h-3.5" /> Lepas
+              <Unlink className="w-3.5 h-3.5" /> {t("unlink")}
             </span>
           )}
         </button>
@@ -736,7 +782,7 @@ function ProviderRow({
             <Sparkles className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <span className="inline-flex items-center gap-1.5">
-              <LinkIcon className="w-3.5 h-3.5" /> Hubungkan
+              <LinkIcon className="w-3.5 h-3.5" /> {t("link")}
             </span>
           )}
         </button>

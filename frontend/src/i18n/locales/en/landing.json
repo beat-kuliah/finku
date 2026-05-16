@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "features": "Features",
+    "testimonials": "Reviews",
+    "pricing": "Pricing",
+    "login": "Sign in",
+    "signup": "Start free"
+  },
+  "hero": {
+    "chip": "Just launched — free forever for early users!",
+    "titleLine1": "Manage money",
+    "titleHighlight1": "without the hassle",
+    "titleLine2": "level up your finances",
+    "titleHighlight2": "automatically.",
+    "subtitle": "FinKu helps you track spending, set budgets, and hit financial goals — all in one trendy app that's",
+    "subtitleBold": "super easy",
+    "ctaPrimary": "Start free now",
+    "ctaSecondary": "See demo",
+    "users": "10k+ Gen Z signed up",
+    "rating": "4.9/5 rating"
+  },
+  "stats": {
+    "users": "Gen Z users",
+    "tracked": "money tracked",
+    "rating": "App rating",
+    "uptime": "Always on",
+    "valueUsers": "10k+",
+    "valueTracked": "500M+",
+    "valueRating": "4.9★",
+    "valueUptime": "24/7"
+  },
+  "features": {
+    "chip": "Why FinKu",
+    "title": "Features that make you",
+    "titleHighlight": "addicted",
+    "titleSuffix": "to saving",
+    "subtitle": "Everything you need to get financially independent, in one fun app.",
+    "items": {
+      "track": { "title": "Log money in 3 seconds", "desc": "Tap, type, done. No fuss, no boredom." },
+      "budget": { "title": "Budget that actually works", "desc": "Set limits per category, auto-warn before you overspend." },
+      "insight": { "title": "AI-style insights", "desc": "\"Your coffee this month is $30 — that's basically a concert ticket 😱\"" },
+      "streak": { "title": "Streaks & badges", "desc": "The more you log, the more badges. FOMO-worthy!" },
+      "notif": { "title": "Smart notifications", "desc": "Bill reminders, savings nudges, never forget." },
+      "secure": { "title": "Safe & private", "desc": "Encrypted data. Only you see your money." }
+    }
+  },
+  "testimonials": {
+    "chip": "Real talk",
+    "title": "What people who are",
+    "titleHighlight": "winning",
+    "titleSuffix": "say",
+    "items": {
+      "kania": { "name": "Kania, 22", "role": "Student", "text": "Finally know why my monthly money runs out before month end 😭 now I can save for concerts!", "emoji": "🎤" },
+      "raka": { "name": "Raka, 24", "role": "First jobber", "text": "The UI is so aesthetic, doesn't feel like budgeting. Like a game but my money actually grows.", "emoji": "🎮" },
+      "sasha": { "name": "Sasha, 20", "role": "Content creator", "text": "The insights are savage. Showed how much I spend on live shopping. Toxic but useful 💀", "emoji": "💅" }
+    }
+  },
+  "cta": {
+    "chip": "Free forever",
+    "title": "Ready to glow up your finances?",
+    "subtitle": "Sign up now, start tracking in 30 seconds. No credit card, no hassle, no drama.",
+    "signup": "Create free account",
+    "login": "Already have an account? Sign in"
+  },
+  "footer": {
+    "copyright": "© 2026 FinKu — made with 💙 for Gen Z",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "support": "Support"
+  },
+  "mockup": {
+    "greeting": "Hi, Kania 👋",
+    "date": "Thu, 23 Apr",
+    "balanceLabel": "Balance this month",
+    "vsLastMonth": "vs last month",
+    "budgetLabel": "Budget this month",
+    "onTrack": "On track!",
+    "recentTx": "Recent transactions",
+    "tx1": { "name": "McD Delivery", "cat": "Food" },
+    "tx2": { "name": "Starbucks", "cat": "Treats" },
+    "tx3": { "name": "April salary", "cat": "Income" }
+  }
+}

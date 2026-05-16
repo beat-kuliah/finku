@@ -1,0 +1,21 @@
+{
+  "loadFailed": "Failed to load",
+  "failed": "Failed",
+  "cancel": "Cancel",
+  "save": "Save",
+  "loading": "Loading…",
+  "selectPlaceholder": "— Select —",
+  "title": "Budget",
+  "subtitle": "Control spending by category",
+  "sectionLabel": "This month's budget",
+  "heading": "Progress vs limit",
+  "addBudget": "Add budget",
+  "totalUsed": "Total used",
+  "newBudget": "New budget",
+  "category": "Expense category",
+  "limit": "Limit (IDR)",
+  "added": "Budget added.",
+  "invalidForm": "Select a category and enter a valid limit.",
+  "noBudgets": "No budgets for this period yet.",
+  "pausedArchived": " · paused (category archived)"
+}

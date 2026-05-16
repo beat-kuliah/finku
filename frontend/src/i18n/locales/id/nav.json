@@ -1,0 +1,18 @@
+{
+  "dashboard": "Dashboard",
+  "transactions": "Transaksi",
+  "stats": "Statistik",
+  "budget": "Budget",
+  "goals": "Goals",
+  "wallets": "Dompet",
+  "profile": "Profil",
+  "home": "Beranda",
+  "more": "Lainnya",
+  "logout": "Keluar",
+  "appName": "FinKu App",
+  "addTransaction": "Tambah transaksi",
+  "moreAriaActive": "{{label}}, buka menu lainnya",
+  "moreAria": "Lainnya",
+  "notificationsToast": "Notifikasi: belum ada push — pengaturan ada di Profil.",
+  "moreSheetTitle": "Lainnya"
+}
