@@ -116,7 +116,7 @@ export default function DashboardPage() {
             {t("monthSummary")}
           </div>
         </div>
-        <div className="grid sm:grid-cols-3 gap-3 mt-5">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
           <StatMini
             icon={<ArrowUpRight className="w-4 h-4" />}
             label={t("incomePeriod")}
@@ -126,6 +126,11 @@ export default function DashboardPage() {
             icon={<ArrowDownRight className="w-4 h-4" />}
             label={t("expensePeriod")}
             value={data ? formatIDR(data.periodExpense) : "…"}
+          />
+          <StatMini
+            icon={<Sparkles className="w-4 h-4" />}
+            label={t("modifiedPeriod")}
+            value={data?.periodModifiedBalance != null ? formatIDR(data.periodModifiedBalance) : "…"}
           />
           <StatMini
             icon={<Wallet className="w-4 h-4" />}

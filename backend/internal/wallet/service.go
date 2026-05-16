@@ -8,16 +8,20 @@ import (
 	"finku/backend/internal/db/sqlc"
 	"finku/backend/internal/finance"
 	"finku/backend/internal/httpx"
+	"finku/backend/internal/transaction"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
 type Service struct {
-	q *sqlc.Queries
+	q     *sqlc.Queries
+	txSvc *transaction.Service
 }
 
-func NewService(q *sqlc.Queries) *Service { return &Service{q: q} }
+func NewService(q *sqlc.Queries, txSvc *transaction.Service) *Service {
+	return &Service{q: q, txSvc: txSvc}
+}
 
 func walletDTO(w sqlc.Wallet) map[string]any {
 	m := map[string]any{

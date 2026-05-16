@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"finku/backend/internal/httpx"
 	"finku/backend/internal/middleware"
@@ -91,6 +92,54 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"wallet": out})
 }
 
+func (h *Handler) AdjustBalance(w http.ResponseWriter, r *http.Request) {
+	uid, ok := middleware.UserID(r.Context())
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized.")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpx.Error(w, http.StatusBadRequest, "BAD_ID", "Invalid wallet id.")
+		return
+	}
+	var in adjustBalanceBody
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "BAD_JSON", "Invalid JSON body.")
+		return
+	}
+	occ := time.Now()
+	if in.OccurredAt != "" {
+		parsed, err := time.Parse("2006-01-02", in.OccurredAt)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, "VALIDATION", "occurredAt harus YYYY-MM-DD.")
+			return
+		}
+		occ = parsed
+	}
+	var catID *uuid.UUID
+	if in.CategoryID != nil && *in.CategoryID != "" {
+		c, err := uuid.Parse(*in.CategoryID)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, "VALIDATION", "categoryId invalid.")
+			return
+		}
+		catID = &c
+	}
+	out, err := h.svc.AdjustBalance(r.Context(), uid, id, AdjustBalanceInput{
+		NewBalance:  in.NewBalance,
+		RecordAs:    in.RecordAs,
+		CategoryID:  catID,
+		OccurredAt:  occ,
+		Description: in.Description,
+	})
+	if err != nil {
+		httpx.WriteServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}
+
 func (h *Handler) Archive(w http.ResponseWriter, r *http.Request) {
 	uid, ok := middleware.UserID(r.Context())
 	if !ok {
@@ -108,6 +157,14 @@ func (h *Handler) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"wallet": out})
+}
+
+type adjustBalanceBody struct {
+	NewBalance  int64   `json:"newBalance"`
+	RecordAs    string  `json:"recordAs"`
+	CategoryID  *string `json:"categoryId"`
+	OccurredAt  string  `json:"occurredAt"`
+	Description *string `json:"description"`
 }
 
 type createWalletBody struct {

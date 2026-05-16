@@ -47,3 +47,34 @@ export async function updateWallet(id: string, body: {
 export async function archiveWallet(id: string) {
   return apiJson<{ wallet: Wallet }>(`/wallets/${id}`, { method: "DELETE" });
 }
+
+export type AdjustBalanceBody = {
+  newBalance: number;
+  recordAs: "income" | "expense" | "modified";
+  categoryId?: string;
+  occurredAt?: string;
+  description?: string;
+};
+
+export type AdjustBalanceTransaction = {
+  id: string;
+  kind: string;
+  amount: number;
+  occurredAt: string;
+  isBalanceIncrease?: boolean;
+  categoryId?: string;
+  description?: string;
+};
+
+export type AdjustBalanceResponse = {
+  wallet: Wallet;
+  transaction?: AdjustBalanceTransaction;
+};
+
+export async function adjustWalletBalance(id: string, body: AdjustBalanceBody) {
+  return apiJson<AdjustBalanceResponse>(`/wallets/${id}/adjust-balance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}

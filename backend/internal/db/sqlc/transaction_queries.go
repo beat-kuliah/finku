@@ -10,13 +10,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const txCols = `t.id, t.user_id, t.kind, t.wallet_id, t.dest_wallet_id, t.category_id, t.amount, t.occurred_at, t.description, t.created_at, t.updated_at`
+const txCols = `t.id, t.user_id, t.kind, t.wallet_id, t.dest_wallet_id, t.category_id, t.amount, t.occurred_at, t.description, t.is_balance_increase, t.created_at, t.updated_at`
 
 func scanTransaction(row interface{ Scan(dest ...any) error }) (Transaction, error) {
 	var t Transaction
 	err := row.Scan(
 		&t.ID, &t.UserID, &t.Kind, &t.WalletID, &t.DestWalletID, &t.CategoryID,
-		&t.Amount, &t.OccurredAt, &t.Description, &t.CreatedAt, &t.UpdatedAt,
+		&t.Amount, &t.OccurredAt, &t.Description, &t.IsBalanceIncrease, &t.CreatedAt, &t.UpdatedAt,
 	)
 	return t, err
 }
@@ -88,7 +88,7 @@ WHERE t.user_id = $1`)
 		var tr TransactionRow
 		err := rows.Scan(
 			&tr.ID, &tr.UserID, &tr.Kind, &tr.WalletID, &tr.DestWalletID, &tr.CategoryID,
-			&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.CreatedAt, &tr.UpdatedAt,
+			&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.IsBalanceIncrease, &tr.CreatedAt, &tr.UpdatedAt,
 			&tr.CategoryName,
 		)
 		if err != nil {
@@ -106,20 +106,32 @@ func maxInt32(a, b int32) int32 {
 	return b
 }
 
-func (q *Queries) InsertTransaction(ctx context.Context, userID uuid.UUID, kind string, walletID uuid.UUID, destWalletID *uuid.UUID, categoryID *uuid.UUID, amount int64, occurredAt time.Time, description *string) (Transaction, error) {
+func (q *Queries) InsertTransaction(ctx context.Context, userID uuid.UUID, kind string, walletID uuid.UUID, destWalletID *uuid.UUID, categoryID *uuid.UUID, amount int64, occurredAt time.Time, description *string, isBalanceIncrease *bool) (Transaction, error) {
 	row := q.pool.QueryRow(ctx, `
-INSERT INTO transactions (user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description)
-VALUES ($1, $2::transaction_kind, $3, $4, $5, $6, $7, $8)
-RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, created_at, updated_at`,
-		userID, kind, walletID, destWalletID, categoryID, amount, occurredAt, description)
+INSERT INTO transactions (user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, is_balance_increase)
+VALUES ($1, $2::transaction_kind, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, is_balance_increase, created_at, updated_at`,
+		userID, kind, walletID, destWalletID, categoryID, amount, occurredAt, description, isBalanceIncrease)
 	return scanTransaction(row)
 }
 
 func (q *Queries) GetTransactionForUser(ctx context.Context, userID, txID uuid.UUID) (Transaction, error) {
 	row := q.pool.QueryRow(ctx, `
-SELECT id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, created_at, updated_at
+SELECT id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, is_balance_increase, created_at, updated_at
 FROM transactions WHERE id = $1 AND user_id = $2`, txID, userID)
 	return scanTransaction(row)
+}
+
+func (q *Queries) SumModifiedInRange(ctx context.Context, userID uuid.UUID, from, to time.Time) (int64, error) {
+	var sum int64
+	err := q.pool.QueryRow(ctx, `
+SELECT COALESCE(SUM(
+  CASE WHEN is_balance_increase THEN amount ELSE -amount END
+), 0)::bigint
+FROM transactions
+WHERE user_id = $1 AND kind = 'modified' AND occurred_at >= $2 AND occurred_at <= $3`,
+		userID, from, to).Scan(&sum)
+	return sum, err
 }
 
 func (q *Queries) GetTransactionRowForUser(ctx context.Context, userID, txID uuid.UUID) (TransactionRow, error) {
@@ -131,13 +143,13 @@ WHERE t.id = $1 AND t.user_id = $2`, txID, userID)
 	var tr TransactionRow
 	err := row.Scan(
 		&tr.ID, &tr.UserID, &tr.Kind, &tr.WalletID, &tr.DestWalletID, &tr.CategoryID,
-		&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.CreatedAt, &tr.UpdatedAt,
+		&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.IsBalanceIncrease, &tr.CreatedAt, &tr.UpdatedAt,
 		&tr.CategoryName,
 	)
 	return tr, err
 }
 
-func (q *Queries) UpdateTransaction(ctx context.Context, userID, txID uuid.UUID, kind string, walletID uuid.UUID, destWalletID *uuid.UUID, categoryID *uuid.UUID, amount int64, occurredAt time.Time, description *string) (Transaction, error) {
+func (q *Queries) UpdateTransaction(ctx context.Context, userID, txID uuid.UUID, kind string, walletID uuid.UUID, destWalletID *uuid.UUID, categoryID *uuid.UUID, amount int64, occurredAt time.Time, description *string, isBalanceIncrease *bool) (Transaction, error) {
 	row := q.pool.QueryRow(ctx, `
 UPDATE transactions SET
   kind = $3::transaction_kind,
@@ -147,10 +159,11 @@ UPDATE transactions SET
   amount = $7,
   occurred_at = $8,
   description = $9,
+  is_balance_increase = $10,
   updated_at = NOW()
 WHERE id = $2 AND user_id = $1
-RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, created_at, updated_at`,
-		userID, txID, kind, walletID, destWalletID, categoryID, amount, occurredAt, description)
+RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, is_balance_increase, created_at, updated_at`,
+		userID, txID, kind, walletID, destWalletID, categoryID, amount, occurredAt, description, isBalanceIncrease)
 	return scanTransaction(row)
 }
 
@@ -297,7 +310,7 @@ LIMIT $2`, userID, n)
 		var tr TransactionRow
 		err := rows.Scan(
 			&tr.ID, &tr.UserID, &tr.Kind, &tr.WalletID, &tr.DestWalletID, &tr.CategoryID,
-			&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.CreatedAt, &tr.UpdatedAt,
+			&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.IsBalanceIncrease, &tr.CreatedAt, &tr.UpdatedAt,
 			&tr.CategoryName,
 		)
 		if err != nil {

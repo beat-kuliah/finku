@@ -19,7 +19,8 @@ func NewService(q *sqlc.Queries) *Service { return &Service{q: q} }
 
 const timeRFC = "2006-01-02T15:04:05.000Z07:00"
 
-func txRowDTO(tr sqlc.TransactionRow) map[string]any {
+// RowDTO maps a transaction row for API responses.
+func RowDTO(tr sqlc.TransactionRow) map[string]any {
 	m := map[string]any{
 		"id":         tr.ID.String(),
 		"userId":     tr.UserID.String(),
@@ -42,17 +43,30 @@ func txRowDTO(tr sqlc.TransactionRow) map[string]any {
 	if tr.CategoryName != nil {
 		m["categoryName"] = *tr.CategoryName
 	}
+	if tr.Kind == "modified" && tr.IsBalanceIncrease != nil {
+		m["isBalanceIncrease"] = *tr.IsBalanceIncrease
+	}
 	return m
 }
 
+func txRowDTO(tr sqlc.TransactionRow) map[string]any { return RowDTO(tr) }
+
 type CreateInput struct {
-	Kind         string
-	WalletID     uuid.UUID
-	DestWalletID *uuid.UUID
-	CategoryID   *uuid.UUID
-	Amount       int64
-	OccurredAt   time.Time
-	Description  *string
+	Kind              string
+	WalletID          uuid.UUID
+	DestWalletID      *uuid.UUID
+	CategoryID        *uuid.UUID
+	Amount            int64
+	OccurredAt        time.Time
+	Description       *string
+	IsBalanceIncrease *bool
+}
+
+func modifiedBalanceDelta(amount int64, increase bool) int64 {
+	if increase {
+		return amount
+	}
+	return -amount
 }
 
 func reverseEffect(ctx context.Context, tx pgx.Tx, t sqlc.Transaction) error {
@@ -71,6 +85,13 @@ func reverseEffect(ctx context.Context, tx pgx.Tx, t sqlc.Transaction) error {
 			return err
 		}
 		_, err := tx.Exec(ctx, `UPDATE wallets SET balance = balance - $2, updated_at = NOW() WHERE id = $1`, *t.DestWalletID, t.Amount)
+		return err
+	case "modified":
+		if t.IsBalanceIncrease == nil {
+			return httpx.SvcErr(http.StatusInternalServerError, "DATA", "Modified transaction corrupt.")
+		}
+		delta := modifiedBalanceDelta(t.Amount, *t.IsBalanceIncrease)
+		_, err := tx.Exec(ctx, `UPDATE wallets SET balance = balance - $2, updated_at = NOW() WHERE id = $1`, t.WalletID, delta)
 		return err
 	default:
 		return nil
@@ -94,15 +115,36 @@ func applyEffect(ctx context.Context, tx pgx.Tx, t sqlc.Transaction) error {
 		}
 		_, err := tx.Exec(ctx, `UPDATE wallets SET balance = balance + $2, updated_at = NOW() WHERE id = $1`, *t.DestWalletID, t.Amount)
 		return err
+	case "modified":
+		if t.IsBalanceIncrease == nil {
+			return httpx.SvcErr(http.StatusInternalServerError, "DATA", "Modified transaction corrupt.")
+		}
+		delta := modifiedBalanceDelta(t.Amount, *t.IsBalanceIncrease)
+		_, err := tx.Exec(ctx, `UPDATE wallets SET balance = balance + $2, updated_at = NOW() WHERE id = $1`, t.WalletID, delta)
+		return err
 	default:
 		return nil
 	}
 }
 
+func (s *Service) ensureWalletBalance(ctx context.Context, userID, walletID uuid.UUID, delta int64) error {
+	w, err := s.q.GetWalletForUser(ctx, userID, walletID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return httpx.SvcErr(http.StatusBadRequest, "WALLET", "Dompet tidak valid.")
+		}
+		return err
+	}
+	if w.Balance+delta < 0 {
+		return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Saldo dompet tidak cukup.")
+	}
+	return nil
+}
+
 func (s *Service) validateCreate(ctx context.Context, userID uuid.UUID, in CreateInput) error {
 	in.Kind = strings.ToLower(strings.TrimSpace(in.Kind))
-	if in.Kind != "income" && in.Kind != "expense" && in.Kind != "transfer" {
-		return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Kind harus income, expense, atau transfer.")
+	if in.Kind != "income" && in.Kind != "expense" && in.Kind != "transfer" && in.Kind != "modified" {
+		return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Kind harus income, expense, transfer, atau modified.")
 	}
 	if in.Amount <= 0 {
 		return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Jumlah harus lebih dari 0.")
@@ -113,6 +155,9 @@ func (s *Service) validateCreate(ctx context.Context, userID uuid.UUID, in Creat
 		}
 		if in.CategoryID != nil {
 			return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Transfer tidak memakai kategori.")
+		}
+		if in.IsBalanceIncrease != nil {
+			return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "isBalanceIncrease hanya untuk modified.")
 		}
 		if *in.DestWalletID == in.WalletID {
 			return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Dompet sumber dan tujuan harus berbeda.")
@@ -131,8 +176,24 @@ func (s *Service) validateCreate(ctx context.Context, userID uuid.UUID, in Creat
 		}
 		return nil
 	}
+	if in.Kind == "modified" {
+		if in.DestWalletID != nil {
+			return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "destWalletId hanya untuk transfer.")
+		}
+		if in.CategoryID != nil {
+			return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Modified tidak memakai kategori.")
+		}
+		if in.IsBalanceIncrease == nil {
+			return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Modified membutuhkan isBalanceIncrease.")
+		}
+		delta := modifiedBalanceDelta(in.Amount, *in.IsBalanceIncrease)
+		return s.ensureWalletBalance(ctx, userID, in.WalletID, delta)
+	}
 	if in.DestWalletID != nil {
 		return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "destWalletId hanya untuk transfer.")
+	}
+	if in.IsBalanceIncrease != nil {
+		return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "isBalanceIncrease hanya untuk modified.")
 	}
 	if in.CategoryID == nil || *in.CategoryID == uuid.Nil {
 		return httpx.SvcErr(http.StatusBadRequest, "VALIDATION", "Pemasukan/pengeluaran wajib punya kategori.")
@@ -150,41 +211,60 @@ func (s *Service) validateCreate(ctx context.Context, userID uuid.UUID, in Creat
 	if (in.Kind == "income" && cat.Kind != "income") || (in.Kind == "expense" && cat.Kind != "expense") {
 		return httpx.SvcErr(http.StatusBadRequest, "CATEGORY", "Kind kategori tidak cocok dengan transaksi.")
 	}
-	if _, err := s.q.GetWalletForUser(ctx, userID, in.WalletID); err != nil {
-		if err == pgx.ErrNoRows {
-			return httpx.SvcErr(http.StatusBadRequest, "WALLET", "Dompet tidak valid.")
-		}
+	var delta int64
+	if in.Kind == "income" {
+		delta = in.Amount
+	} else {
+		delta = -in.Amount
+	}
+	if err := s.ensureWalletBalance(ctx, userID, in.WalletID, delta); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Service) Create(ctx context.Context, userID uuid.UUID, in CreateInput) (map[string]any, error) {
+// CreateInTx inserts a transaction and applies wallet effects inside an existing DB transaction.
+func (s *Service) CreateInTx(ctx context.Context, tx pgx.Tx, userID uuid.UUID, in CreateInput) (sqlc.Transaction, error) {
 	if err := s.validateCreate(ctx, userID, in); err != nil {
-		return nil, err
+		return sqlc.Transaction{}, err
 	}
 	var dest *uuid.UUID
 	if in.DestWalletID != nil && *in.DestWalletID != uuid.Nil {
 		dest = in.DestWalletID
 	}
+	var catID *uuid.UUID
+	if in.CategoryID != nil && *in.CategoryID != uuid.Nil {
+		catID = in.CategoryID
+	}
 
+	var tr sqlc.Transaction
+	err := tx.QueryRow(ctx, `
+INSERT INTO transactions (user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, is_balance_increase)
+VALUES ($1, $2::transaction_kind, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, is_balance_increase, created_at, updated_at`,
+		userID, in.Kind, in.WalletID, dest, catID, in.Amount, in.OccurredAt, in.Description, in.IsBalanceIncrease,
+	).Scan(
+		&tr.ID, &tr.UserID, &tr.Kind, &tr.WalletID, &tr.DestWalletID, &tr.CategoryID,
+		&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.IsBalanceIncrease, &tr.CreatedAt, &tr.UpdatedAt,
+	)
+	if err != nil {
+		return sqlc.Transaction{}, err
+	}
+	if err := applyEffect(ctx, tx, tr); err != nil {
+		return sqlc.Transaction{}, err
+	}
+	return tr, nil
+}
+
+func (s *Service) Create(ctx context.Context, userID uuid.UUID, in CreateInput) (map[string]any, error) {
 	tx, err := s.q.Pool().Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
-	var tr sqlc.Transaction
-	err = tx.QueryRow(ctx, `
-INSERT INTO transactions (user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description)
-VALUES ($1, $2::transaction_kind, $3, $4, $5, $6, $7, $8)
-RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, created_at, updated_at`,
-		userID, in.Kind, in.WalletID, dest, in.CategoryID, in.Amount, in.OccurredAt, in.Description,
-	).Scan(&tr.ID, &tr.UserID, &tr.Kind, &tr.WalletID, &tr.DestWalletID, &tr.CategoryID, &tr.Amount, &tr.OccurredAt, &tr.Description, &tr.CreatedAt, &tr.UpdatedAt)
+	tr, err := s.CreateInTx(ctx, tx, userID, in)
 	if err != nil {
-		return nil, err
-	}
-	if err := applyEffect(ctx, tx, tr); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -236,19 +316,21 @@ func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) error {
 }
 
 type UpdateInput struct {
-	Kind         string
-	WalletID     uuid.UUID
-	DestWalletID *uuid.UUID
-	CategoryID   *uuid.UUID
-	Amount       int64
-	OccurredAt   time.Time
-	Description  *string
+	Kind              string
+	WalletID          uuid.UUID
+	DestWalletID      *uuid.UUID
+	CategoryID        *uuid.UUID
+	Amount            int64
+	OccurredAt        time.Time
+	Description       *string
+	IsBalanceIncrease *bool
 }
 
 func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, in UpdateInput) (map[string]any, error) {
 	ci := CreateInput{
 		Kind: in.Kind, WalletID: in.WalletID, DestWalletID: in.DestWalletID,
-		CategoryID: in.CategoryID, Amount: in.Amount, OccurredAt: in.OccurredAt, Description: in.Description,
+		CategoryID: in.CategoryID, Amount: in.Amount, OccurredAt: in.OccurredAt,
+		Description: in.Description, IsBalanceIncrease: in.IsBalanceIncrease,
 	}
 	if err := s.validateCreate(ctx, userID, ci); err != nil {
 		return nil, err
@@ -263,6 +345,10 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, in UpdateInp
 	var dest *uuid.UUID
 	if in.DestWalletID != nil && *in.DestWalletID != uuid.Nil {
 		dest = in.DestWalletID
+	}
+	var catID *uuid.UUID
+	if in.CategoryID != nil && *in.CategoryID != uuid.Nil {
+		catID = in.CategoryID
 	}
 
 	tx, err := s.q.Pool().Begin(ctx)
@@ -283,11 +369,15 @@ UPDATE transactions SET
   amount = $7,
   occurred_at = $8,
   description = $9,
+  is_balance_increase = $10,
   updated_at = NOW()
 WHERE id = $2 AND user_id = $1
-RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, created_at, updated_at`,
-		userID, id, in.Kind, in.WalletID, dest, in.CategoryID, in.Amount, in.OccurredAt, in.Description,
-	).Scan(&tr.ID, &tr.UserID, &tr.Kind, &tr.WalletID, &tr.DestWalletID, &tr.CategoryID, &tr.Amount, &tr.OccurredAt, &tr.Description, &tr.CreatedAt, &tr.UpdatedAt)
+RETURNING id, user_id, kind, wallet_id, dest_wallet_id, category_id, amount, occurred_at, description, is_balance_increase, created_at, updated_at`,
+		userID, id, in.Kind, in.WalletID, dest, catID, in.Amount, in.OccurredAt, in.Description, in.IsBalanceIncrease,
+	).Scan(
+		&tr.ID, &tr.UserID, &tr.Kind, &tr.WalletID, &tr.DestWalletID, &tr.CategoryID,
+		&tr.Amount, &tr.OccurredAt, &tr.Description, &tr.IsBalanceIncrease, &tr.CreatedAt, &tr.UpdatedAt,
+	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, httpx.SvcErr(http.StatusNotFound, "NOT_FOUND", "Transaksi tidak ditemukan.")

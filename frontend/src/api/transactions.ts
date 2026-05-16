@@ -3,7 +3,8 @@ import { apiFetch, apiJson, readApiError } from "@/lib/api";
 export type Transaction = {
   id: string;
   userId: string;
-  kind: "income" | "expense" | "transfer";
+  kind: "income" | "expense" | "transfer" | "modified";
+  isBalanceIncrease?: boolean;
   walletId: string;
   destWalletId?: string;
   categoryId?: string;

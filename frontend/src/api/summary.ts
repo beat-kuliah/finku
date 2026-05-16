@@ -4,6 +4,7 @@ export type DashboardPayload = {
   totalBalance: number;
   periodIncome: number;
   periodExpense: number;
+  periodModifiedBalance?: number;
   periodFrom: string;
   periodTo: string;
   dailyTrend: Array<{ date: string; income: number; expense: number }>;
@@ -40,6 +41,7 @@ export type StatsPayload = {
   periodTo: string;
   totalIncome: number;
   totalExpense: number;
+  totalModifiedBalance?: number;
   categoryBreakdown: Array<{ name: string; value: number; archived: boolean }>;
   weeklyExpense: Array<{ week: string; total: number }>;
 };

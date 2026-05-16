@@ -75,17 +75,18 @@ type Category struct {
 
 // Transaction mirrors transactions.
 type Transaction struct {
-	ID            uuid.UUID  `json:"id"`
-	UserID        uuid.UUID  `json:"user_id"`
-	Kind          string     `json:"kind"`
-	WalletID      uuid.UUID  `json:"wallet_id"`
-	DestWalletID  *uuid.UUID `json:"dest_wallet_id,omitempty"`
-	CategoryID    *uuid.UUID `json:"category_id,omitempty"`
-	Amount        int64      `json:"amount"`
-	OccurredAt    time.Time  `json:"occurred_at"`
-	Description   *string    `json:"description,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID                 uuid.UUID  `json:"id"`
+	UserID             uuid.UUID  `json:"user_id"`
+	Kind               string     `json:"kind"`
+	WalletID           uuid.UUID  `json:"wallet_id"`
+	DestWalletID       *uuid.UUID `json:"dest_wallet_id,omitempty"`
+	CategoryID         *uuid.UUID `json:"category_id,omitempty"`
+	Amount             int64      `json:"amount"`
+	OccurredAt         time.Time  `json:"occurred_at"`
+	Description        *string    `json:"description,omitempty"`
+	IsBalanceIncrease  *bool      `json:"is_balance_increase,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 // TransactionRow includes joined category name for API responses.

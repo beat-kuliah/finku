@@ -69,12 +69,12 @@ func main() {
 	authMw := middleware.NewAuth(access, rdb)
 	rateMw := middleware.NewRateLimiter(rdb)
 
-	walletSvc := wallet.NewService(q)
+	txSvc := transaction.NewService(q)
+	txH := transaction.NewHandler(txSvc)
+	walletSvc := wallet.NewService(q, txSvc)
 	walletH := wallet.NewHandler(walletSvc)
 	catSvc := category.NewService(q)
 	catH := category.NewHandler(catSvc)
-	txSvc := transaction.NewService(q)
-	txH := transaction.NewHandler(txSvc)
 	budSvc := budget.NewService(q)
 	budH := budget.NewHandler(budSvc)
 	goalSvc := goal.NewService(q)
@@ -143,6 +143,7 @@ func main() {
 			r.Get("/wallets", walletH.List)
 			r.Post("/wallets", walletH.Create)
 			r.Patch("/wallets/{id}", walletH.Update)
+			r.Post("/wallets/{id}/adjust-balance", walletH.AdjustBalance)
 			r.Delete("/wallets/{id}", walletH.Archive)
 
 			r.Get("/wallet-groups", walletH.ListGroups)

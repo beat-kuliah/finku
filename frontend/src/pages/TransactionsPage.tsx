@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/dates";
 import { formatIDR } from "@/lib/format";
 import { toast } from "sonner";
 
-const KIND_KEYS = ["income", "expense", "transfer"] as const;
+const KIND_KEYS = ["income", "expense", "transfer", "modified"] as const;
 
 export default function TransactionsPage() {
   const { t } = useTranslation("transactions");
@@ -28,7 +28,7 @@ export default function TransactionsPage() {
   }, [wallets]);
 
   const kindLabel = (k: string) => {
-    if (k === "income" || k === "expense" || k === "transfer") {
+    if (k === "income" || k === "expense" || k === "transfer" || k === "modified") {
       return t(k);
     }
     return k;
@@ -154,9 +154,13 @@ export default function TransactionsPage() {
           {!loading &&
             items.map((tx) => {
               const isIncome = tx.kind === "income";
+              const isModified = tx.kind === "modified";
+              const modifiedUp = isModified && tx.isBalanceIncrease === true;
+              const modifiedDown = isModified && tx.isBalanceIncrease === false;
               const title = tx.description || tx.categoryName || kindLabel(tx.kind);
               const wname = walletMap.get(tx.walletId) ?? t("walletFallback");
               const cat = tx.categoryName || kindLabel(tx.kind);
+              const sign = isIncome || modifiedUp ? "+" : modifiedDown || tx.kind === "expense" ? "-" : "";
               return (
                 <div
                   key={tx.id}
@@ -174,8 +178,12 @@ export default function TransactionsPage() {
                       {cat} · {wname}
                     </p>
                   </div>
-                  <p className={`text-sm font-bold ${isIncome ? "text-neon-lime" : "text-white"}`}>
-                    {isIncome ? "+" : tx.kind === "transfer" ? "" : "-"}
+                  <p
+                    className={`text-sm font-bold ${
+                      isIncome || modifiedUp ? "text-neon-lime" : modifiedDown ? "text-white" : "text-white"
+                    }`}
+                  >
+                    {sign}
                     {formatIDR(tx.amount, false)}
                   </p>
                 </div>

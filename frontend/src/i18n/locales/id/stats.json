@@ -4,6 +4,8 @@
   "period": "Periode {{from}} — {{to}}",
   "totalIncome": "Total income",
   "totalExpense": "Total expense",
+  "totalModifiedBalance": "Penyesuaian saldo (net)",
+  "modifiedHint": "Transaksi modified saja; tidak masuk income/expense.",
   "byCategory": "Per kategori",
   "weeklyExpense": "Per minggu (expense)",
   "noData": "Belum ada data.",

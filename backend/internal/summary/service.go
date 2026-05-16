@@ -16,6 +16,7 @@ func NewService(q *sqlc.Queries) *Service { return &Service{q: q} }
 func (s *Service) Dashboard(ctx context.Context, userID uuid.UUID, from, to time.Time) (map[string]any, error) {
 	totalBal, _ := s.q.TotalWalletBalance(ctx, userID)
 	inc, exp, _ := s.q.SumIncomeExpenseInRange(ctx, userID, from, to)
+	modBal, _ := s.q.SumModifiedInRange(ctx, userID, from, to)
 	trend, _ := s.q.DailyTrend(ctx, userID, from, to)
 	cats, _ := s.q.ExpenseByCategoryInRange(ctx, userID, from, to)
 	budgets, _ := s.q.ListBudgetsWithSpent(ctx, userID, from, to)
@@ -67,11 +68,12 @@ func (s *Service) Dashboard(ctx context.Context, userID uuid.UUID, from, to time
 	}
 
 	return map[string]any{
-		"totalBalance":   totalBal,
-		"periodIncome":   inc,
-		"periodExpense":  exp,
-		"periodFrom":     from.Format("2006-01-02"),
-		"periodTo":       to.Format("2006-01-02"),
+		"totalBalance":          totalBal,
+		"periodIncome":          inc,
+		"periodExpense":         exp,
+		"periodModifiedBalance": modBal,
+		"periodFrom":            from.Format("2006-01-02"),
+		"periodTo":              to.Format("2006-01-02"),
 		"dailyTrend":     trendOut,
 		"categoryBreakdown": catOut,
 		"budgets":        budOut,
@@ -90,6 +92,7 @@ func (s *Service) Stats(ctx context.Context, userID uuid.UUID, from, to time.Tim
 	cats, _ := s.q.ExpenseByCategoryInRange(ctx, userID, from, to)
 	weeks, _ := s.q.WeeklyExpenseInRange(ctx, userID, from, to)
 	inc, exp, _ := s.q.SumIncomeExpenseInRange(ctx, userID, from, to)
+	modBal, _ := s.q.SumModifiedInRange(ctx, userID, from, to)
 
 	catOut := make([]map[string]any, 0, len(cats))
 	for _, c := range cats {
@@ -111,10 +114,11 @@ func (s *Service) Stats(ctx context.Context, userID uuid.UUID, from, to time.Tim
 		})
 	}
 	return map[string]any{
-		"periodFrom":          from.Format("2006-01-02"),
-		"periodTo":            to.Format("2006-01-02"),
-		"totalIncome":         inc,
-		"totalExpense":        exp,
+		"periodFrom":            from.Format("2006-01-02"),
+		"periodTo":              to.Format("2006-01-02"),
+		"totalIncome":           inc,
+		"totalExpense":          exp,
+		"totalModifiedBalance":  modBal,
 		"categoryBreakdown":   catOut,
 		"weeklyExpense":       wOut,
 	}, nil

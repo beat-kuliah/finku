@@ -7,6 +7,7 @@
   "income": "Pemasukan",
   "expense": "Pengeluaran",
   "transfer": "Transfer",
+  "modified": "Penyesuaian saldo",
   "apply": "Terapkan",
   "exportCsv": "Export CSV",
   "searchPlaceholder": "Cari transaksi (deskripsi)…",

@@ -86,6 +86,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	ci := CreateInput{
 		Kind: in.Kind, WalletID: wid, Amount: in.Amount, OccurredAt: occ, Description: in.Description,
+		IsBalanceIncrease: in.IsBalanceIncrease,
 	}
 	if in.DestWalletID != nil {
 		if d, e := uuid.Parse(*in.DestWalletID); e == nil {
@@ -133,6 +134,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	ui := UpdateInput{
 		Kind: in.Kind, WalletID: wid, Amount: in.Amount, OccurredAt: occ, Description: in.Description,
+		IsBalanceIncrease: in.IsBalanceIncrease,
 	}
 	if in.DestWalletID != nil {
 		if d, e := uuid.Parse(*in.DestWalletID); e == nil {
@@ -171,11 +173,12 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 type bodyTx struct {
-	Kind         string  `json:"kind"`
-	WalletID     string  `json:"walletId"`
-	DestWalletID *string `json:"destWalletId"`
-	CategoryID   *string `json:"categoryId"`
-	Amount       int64   `json:"amount"`
-	OccurredAt   string  `json:"occurredAt"`
-	Description  *string `json:"description"`
+	Kind              string  `json:"kind"`
+	WalletID          string  `json:"walletId"`
+	DestWalletID      *string `json:"destWalletId"`
+	CategoryID        *string `json:"categoryId"`
+	Amount            int64   `json:"amount"`
+	OccurredAt        string  `json:"occurredAt"`
+	Description       *string `json:"description"`
+	IsBalanceIncrease *bool   `json:"isBalanceIncrease"`
 }

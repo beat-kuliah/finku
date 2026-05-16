@@ -4,6 +4,7 @@ import { Wallet as WalletIcon } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import AddWalletModal from "@/components/AddWalletModal";
 import EditWalletModal from "@/components/EditWalletModal";
+import AdjustWalletBalanceModal from "@/components/AdjustWalletBalanceModal";
 import * as walletsApi from "@/api/wallets";
 import * as walletGroupsApi from "@/api/walletGroups";
 import { useDataVersion } from "@/store/dataVersion";
@@ -30,6 +31,7 @@ export default function WalletsPage() {
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingWallet, setEditingWallet] = useState<walletsApi.Wallet | null>(null);
+  const [adjustingWallet, setAdjustingWallet] = useState<walletsApi.Wallet | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupName, setEditingGroupName] = useState("");
 
@@ -148,6 +150,13 @@ export default function WalletsPage() {
             onClick={() => setEditingWallet(w)}
           >
             {t("edit")}
+          </button>
+          <button
+            type="button"
+            className="text-xs text-neon-cyan hover:underline"
+            onClick={() => setAdjustingWallet(w)}
+          >
+            {t("adjustBalance")}
           </button>
           <button
             type="button"
@@ -339,6 +348,14 @@ export default function WalletsPage() {
         wallet={editingWallet}
         groups={sortedGroups}
         onClose={() => setEditingWallet(null)}
+        onSaved={() => {
+          void load();
+        }}
+      />
+      <AdjustWalletBalanceModal
+        open={!!adjustingWallet}
+        wallet={adjustingWallet}
+        onClose={() => setAdjustingWallet(null)}
         onSaved={() => {
           void load();
         }}

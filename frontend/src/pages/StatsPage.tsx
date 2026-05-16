@@ -56,7 +56,7 @@ export default function StatsPage() {
             ? t("period", { from: data.periodFrom, to: data.periodTo })
             : null}
         </p>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs text-white/60">{t("totalIncome")}</p>
             <p className="font-display text-2xl font-bold mt-1">{data ? formatIDR(data.totalIncome) : "—"}</p>
@@ -64,6 +64,13 @@ export default function StatsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs text-white/60">{t("totalExpense")}</p>
             <p className="font-display text-2xl font-bold mt-1">{data ? formatIDR(data.totalExpense) : "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 lg:col-span-1">
+            <p className="text-xs text-white/60">{t("totalModifiedBalance")}</p>
+            <p className="font-display text-2xl font-bold mt-1">
+              {data?.totalModifiedBalance != null ? formatIDR(data.totalModifiedBalance) : "—"}
+            </p>
+            <p className="text-xs text-white/45 mt-2">{t("modifiedHint")}</p>
           </div>
         </div>
       </section>
