@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/theme/theme_controller.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
-import 'package:finku_mobile/src/features/shell/presentation/app_shell.dart';
+import 'package:finku_mobile/src/features/shell/presentation/shell_branch.dart';
+import 'package:finku_mobile/src/features/shell/presentation/widgets/placeholder_section.dart';
 
 /// Bottom sheet revealed by the "More" slot of the dock.
 ///
@@ -16,6 +18,7 @@ class MoreSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final mode = ref.watch(themeControllerProvider);
@@ -31,7 +34,7 @@ class MoreSheet extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 18, top: 4),
               child: Text(
-                'Lainnya',
+                l10n.t('nav', 'moreSheetTitle'),
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: scheme.onSurface,
@@ -41,19 +44,19 @@ class MoreSheet extends ConsumerWidget {
             ),
             _SheetTile(
               icon: Icons.pie_chart_rounded,
-              label: 'Statistik',
+              label: ShellBranch.stats.navLabel(l10n),
               onTap: () => onNavigate(ShellBranch.stats),
             ),
             const SizedBox(height: 8),
             _SheetTile(
               icon: Icons.flag_rounded,
-              label: 'Target',
+              label: ShellBranch.goals.navLabel(l10n),
               onTap: () => onNavigate(ShellBranch.goals),
             ),
             const SizedBox(height: 8),
             _SheetTile(
               icon: Icons.person_rounded,
-              label: 'Profil',
+              label: ShellBranch.profile.navLabel(l10n),
               onTap: () => onNavigate(ShellBranch.profile),
             ),
             const SizedBox(height: 16),
@@ -74,7 +77,7 @@ class MoreSheet extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Mode gelap',
+                      l10n.t('profile', 'darkMode'),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: scheme.onSurface,
@@ -95,7 +98,7 @@ class MoreSheet extends ConsumerWidget {
             const SizedBox(height: 16),
             _SheetTile(
               icon: Icons.logout_rounded,
-              label: 'Keluar',
+              label: l10n.t('nav', 'logout'),
               danger: true,
               onTap: () async {
                 Navigator.of(context).pop();

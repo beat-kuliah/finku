@@ -16,11 +16,15 @@ class BottomNavItemData {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.semanticsLabel,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+
+  /// Overrides [label] for screen readers (e.g. nav `moreAriaActive`).
+  final String? semanticsLabel;
 }
 
 class BottomNavBar extends StatefulWidget {
@@ -538,7 +542,7 @@ class _BottomNavSlot extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: item.label,
+      label: item.semanticsLabel ?? item.label,
       onTap: item.onTap,
       child: Material(
         color: Colors.transparent,

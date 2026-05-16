@@ -1,20 +1,28 @@
+import 'package:finku_mobile/src/core/errors/api_error.dart';
 import 'package:finku_mobile/src/core/secure_storage/token_store.dart';
 import 'package:finku_mobile/src/features/auth/data/auth_api.dart';
 import 'package:finku_mobile/src/features/auth/domain/auth_state.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
+typedef AuthString = String Function(String key);
 
 class AuthRepository {
   AuthRepository({
     required AuthApi api,
     required TokenStore tokenStore,
     required GoogleSignIn googleSignIn,
+    AuthString? authString,
   })  : _api = api,
         _tokenStore = tokenStore,
-        _googleSignIn = googleSignIn;
+        _googleSignIn = googleSignIn,
+        _authString = authString ?? ((_) => '');
 
   final AuthApi _api;
   final TokenStore _tokenStore;
   final GoogleSignIn _googleSignIn;
+  final AuthString _authString;
+
+  String _t(String key) => _authString(key);
 
   Future<AuthState> bootstrap() async {
     final refresh = await _tokenStore.readRefreshToken();
@@ -62,7 +70,10 @@ class AuthRepository {
     final auth = account.authentication;
     final idToken = auth.idToken;
     if (idToken == null || idToken.isEmpty) {
-      throw Exception('Google ID token tidak tersedia');
+      throw ApiError(
+        message: _t('oauth.noCredential'),
+        statusCode: 0,
+      );
     }
     final res = await _api.loginWithGoogle(idToken);
     await _tokenStore.saveRefreshToken(res.refreshToken);

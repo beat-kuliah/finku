@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:finku_mobile/src/core/errors/api_error.dart';
-import 'package:finku_mobile/src/features/auth/data/auth_api.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
 import 'package:finku_mobile/src/features/auth/presentation/widgets/auth_scaffold.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/gradient_button.dart';
@@ -35,7 +35,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           );
       if (mounted) context.go('/dashboard');
     } catch (e) {
-      _showError(AuthApi.mapDioError(e));
+      _showError(localizedAuthError(ref, e, AuthErrorScope.login));
     }
   }
 
@@ -44,25 +44,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       await ref.read(authControllerProvider.notifier).loginWithGoogle();
       if (mounted) context.go('/dashboard');
     } catch (e) {
-      _showError(AuthApi.mapDioError(e));
+      _showError(localizedAuthError(ref, e, AuthErrorScope.google));
     }
   }
 
-  void _showError(ApiError err) {
+  void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(err.message)),
+      SnackBar(content: Text(message)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(l10nBundleProvider);
+    final l10n = context.l10n;
     final loading = ref.watch(authControllerProvider).isLoading;
     final scheme = Theme.of(context).colorScheme;
 
     return AuthScaffold(
-      title: 'Selamat datang kembali',
-      subtitle: 'Masuk ke akun FinKu kamu untuk lanjut mengelola keuangan.',
+      title: l10n.t('auth', 'loginPage.title'),
+      subtitle: l10n.t('auth', 'loginPage.subtitle'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -71,9 +73,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             enabled: !loading,
-            decoration: const InputDecoration(
-              labelText: 'Email atau username',
-              prefixIcon: Icon(Icons.alternate_email_rounded, size: 18),
+            decoration: InputDecoration(
+              labelText: l10n.t('auth', 'loginPage.identifierLabel'),
+              prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18),
             ),
           ),
           const SizedBox(height: 14),
@@ -84,10 +86,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             enabled: !loading,
             onSubmitted: (_) => _submit(),
             decoration: InputDecoration(
-              labelText: 'Password',
+              labelText: l10n.t('auth', 'loginPage.passwordLabel'),
               prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18),
               suffixIcon: IconButton(
-                tooltip: _showPassword ? 'Sembunyikan' : 'Tampilkan',
+                tooltip: l10n.t('auth', 'loginPage.togglePassword'),
                 onPressed: () => setState(() => _showPassword = !_showPassword),
                 icon: Icon(
                   _showPassword
@@ -102,7 +104,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           GradientButton(
             onPressed: loading ? null : _submit,
             loading: loading,
-            child: const Text('Masuk'),
+            child: Text(
+              loading
+                  ? l10n.t('auth', 'loginPage.submitting')
+                  : l10n.t('auth', 'loginPage.submit'),
+            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -111,7 +117,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  'atau',
+                  l10n.t('auth', 'loginPage.dividerOr'),
                   style: TextStyle(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.55),
@@ -125,12 +131,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           OutlinedButton.icon(
             onPressed: loading ? null : _google,
             icon: const _GoogleGlyph(),
-            label: const Text('Masuk dengan Google'),
+            label: Text(l10n.t('auth', 'loginPage.googleButton')),
           ),
           const SizedBox(height: 14),
           TextButton(
             onPressed: loading ? null : () => context.go('/register'),
-            child: const Text('Belum punya akun? Daftar'),
+            child: Text(
+              '${l10n.t('auth', 'loginPage.noAccount')} ${l10n.t('auth', 'loginPage.signUpLink')}',
+            ),
           ),
         ],
       ),

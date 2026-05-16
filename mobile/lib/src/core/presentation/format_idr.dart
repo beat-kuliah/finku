@@ -1,17 +1,16 @@
-/// Formats whole rupiah amounts like `Rp 12.345` (id-ID style).
-String formatIdr(num amount, {bool withPrefix = true}) {
+import 'package:finku_mobile/src/core/l10n/app_locale.dart';
+import 'package:intl/intl.dart';
+
+/// Formats whole rupiah amounts like `Rp 1.234.567` (id) or `Rp 1,234,567` (en).
+String formatIdr(
+  num amount, {
+  bool withPrefix = true,
+  AppLocale locale = AppLocale.id,
+}) {
   final neg = amount < 0;
   final v = amount.abs().round();
-  final digits = v.toString();
-  final buf = StringBuffer();
-  for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) {
-      buf.write('.');
-    }
-    buf.write(digits[i]);
-  }
-  final core = buf.toString();
-  final body = neg ? '-$core' : core;
+  final formatted = NumberFormat('#,###', locale.bcp47Tag).format(v);
+  final body = neg ? '-$formatted' : formatted;
   return withPrefix ? 'Rp $body' : body;
 }
 

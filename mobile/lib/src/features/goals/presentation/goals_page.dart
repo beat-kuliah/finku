@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:finku_mobile/src/core/errors/api_error.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/network/dio_api_mapper.dart';
 import 'package:finku_mobile/src/core/presentation/finku_empty_state.dart';
 import 'package:finku_mobile/src/core/presentation/finku_list_skeleton.dart';
@@ -18,28 +19,29 @@ class GoalsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
     final async = ref.watch(goalsListProvider);
 
     return BranchScaffold(
-      title: 'Target',
-      subtitle: 'Tabungan & mimpi',
+      title: l10n.t('goals', 'title'),
+      subtitle: l10n.t('goals', 'subtitle'),
       children: [
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
             onPressed: () => _openCreate(context, ref),
             icon: const Icon(Icons.flag_rounded),
-            label: const Text('Target baru'),
+            label: Text(l10n.t('goals', 'createGoal')),
           ),
         ),
         const SizedBox(height: 8),
         async.when(
           data: (goals) {
             if (goals.isEmpty) {
-              return const FinkuEmptyState(
+              return FinkuEmptyState(
                 icon: Icons.flag_outlined,
-                title: 'Belum ada target',
-                message: 'Buat target tabungan dan pantau progresnya di sini.',
+                title: l10n.t('goals', 'noGoals'),
+                message: l10n.t('goals', 'emptyMessage'),
               );
             }
             return Column(
@@ -56,7 +58,7 @@ class GoalsPage extends ConsumerWidget {
           loading: () => const FinkuListSkeleton(count: 4),
           error: (e, _) => FinkuEmptyState(
             icon: Icons.error_outline_rounded,
-            title: 'Gagal memuat target',
+            title: l10n.t('goals', 'loadFailed'),
             message: e is ApiError ? e.message : e.toString(),
           ),
         ),
@@ -65,35 +67,45 @@ class GoalsPage extends ConsumerWidget {
   }
 
   Future<void> _openCreate(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final nameCtrl = TextEditingController();
     final targetCtrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Target baru'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Nama target'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: targetCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Nominal target (IDR)',
-                hintText: '10000000',
+      builder: (ctx) {
+        final dialogL10n = ctx.l10n;
+        return AlertDialog(
+          title: Text(dialogL10n.t('goals', 'newGoal')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: InputDecoration(labelText: dialogL10n.t('goals', 'name')),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: targetCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: dialogL10n.t('goals', 'target'),
+                  hintText: '10000000',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(dialogL10n.t('goals', 'cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(dialogL10n.t('goals', 'save')),
             ),
           ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Buat')),
-        ],
-      ),
+        );
+      },
     );
     if (ok != true) return;
     if (!context.mounted) return;
@@ -101,7 +113,7 @@ class GoalsPage extends ConsumerWidget {
     final t = int.tryParse(targetCtrl.text.replaceAll(RegExp(r'[^\d]'), ''));
     if (name.isEmpty || t == null || t <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Isi nama dan nominal valid.')),
+        SnackBar(content: Text(l10n.t('goals', 'invalidForm'))),
       );
       return;
     }
@@ -109,7 +121,9 @@ class GoalsPage extends ConsumerWidget {
       await ref.read(goalsApiProvider).create(name: name, targetAmount: t);
       ref.read(dataRevisionProvider.notifier).state++;
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Target dibuat.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('goals', 'created'))),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -129,6 +143,7 @@ class _GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final frac = goal.targetAmount > 0
         ? (goal.currentAmount / goal.targetAmount).clamp(0.0, 1.0)
@@ -190,7 +205,7 @@ class _GoalCard extends StatelessWidget {
           if (goal.deadline != null && goal.deadline!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              'Deadline: ${goal.deadline}',
+              l10n.t('goals', 'deadlineLabel', args: {'date': goal.deadline!}),
               style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.55)),
             ),
           ],
@@ -199,12 +214,15 @@ class _GoalCard extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: () => _contribute(context, ref, goal),
-                child: const Text('Tambah dana'),
+                child: Text(l10n.t('goals', 'addFunds')),
               ),
               const Spacer(),
               TextButton(
                 onPressed: () => _confirmDelete(context, ref, goal.id),
-                child: Text('Hapus', style: TextStyle(color: scheme.error)),
+                child: Text(
+                  l10n.t('wallets', 'delete'),
+                  style: TextStyle(color: scheme.error),
+                ),
               ),
             ],
           ),
@@ -214,21 +232,31 @@ class _GoalCard extends StatelessWidget {
   }
 
   Future<void> _contribute(BuildContext context, WidgetRef ref, GoalDto g) async {
+    final l10n = context.l10n;
     final ctrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Setor ke ${g.name}'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Jumlah (IDR)'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Setor')),
-        ],
-      ),
+      builder: (ctx) {
+        final dialogL10n = ctx.l10n;
+        return AlertDialog(
+          title: Text(dialogL10n.t('goals', 'contributeTitle', args: {'name': g.name})),
+          content: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: dialogL10n.t('goals', 'contributeAmount')),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(dialogL10n.t('goals', 'cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(dialogL10n.t('goals', 'contributeAction')),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true) return;
     final amt = int.tryParse(ctrl.text.replaceAll(RegExp(r'[^\d]'), ''));
@@ -237,7 +265,9 @@ class _GoalCard extends StatelessWidget {
       await ref.read(goalsApiProvider).contribute(g.id, amt);
       ref.read(dataRevisionProvider.notifier).state++;
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dana ditambahkan.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('goals', 'fundAdded'))),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -249,23 +279,35 @@ class _GoalCard extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, String id) async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus target?'),
-        content: const Text('Tindakan ini tidak bisa dibatalkan.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus')),
-        ],
-      ),
+      builder: (ctx) {
+        final dialogL10n = ctx.l10n;
+        return AlertDialog(
+          title: Text(dialogL10n.t('goals', 'deleteTitle')),
+          content: Text(dialogL10n.t('goals', 'deleteBody')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(dialogL10n.t('goals', 'cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(dialogL10n.t('wallets', 'delete')),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true) return;
     try {
       await ref.read(goalsApiProvider).delete(id);
       ref.read(dataRevisionProvider.notifier).state++;
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Target dihapus.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('goals', 'deleted'))),
+        );
       }
     } catch (e) {
       if (context.mounted) {

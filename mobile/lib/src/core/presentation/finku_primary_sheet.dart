@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 
 /// Bottom sheet layout: drag handle, title row, body, optional sticky footer.
 ///
@@ -102,7 +103,7 @@ class FinkuPrimarySheet extends StatelessWidget {
                           onPressed:
                               onClose ?? () => Navigator.of(context).maybePop(),
                           icon: const Icon(Icons.close_rounded),
-                          tooltip: 'Tutup',
+                          tooltip: context.l10n.t('common', 'close'),
                         ),
                       ],
                     ),

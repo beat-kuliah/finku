@@ -1,11 +1,59 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finku_mobile/src/core/config/env.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/network/dio_api_mapper.dart';
 import 'package:finku_mobile/src/core/network/dio_client.dart';
 import 'package:finku_mobile/src/core/secure_storage/token_store_provider.dart';
 import 'package:finku_mobile/src/features/auth/data/auth_api.dart';
 import 'package:finku_mobile/src/features/auth/data/auth_repository.dart';
 import 'package:finku_mobile/src/features/auth/domain/auth_state.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
+enum AuthErrorScope { login, register, google }
+
+/// Maps API/network errors to localized auth strings when a key exists.
+String localizedAuthError(WidgetRef ref, Object error, AuthErrorScope scope) {
+  final l10n = ref.read(l10nBundleProvider).requireValue;
+  final api = mapDioToApiError(error);
+
+  if (api.statusCode == 429) {
+    return l10n.t(
+      'auth',
+      scope == AuthErrorScope.register
+          ? 'register.tooManyAttempts'
+          : 'login.tooManyAttempts',
+    );
+  }
+  if (api.statusCode == 423) {
+    return l10n.t('auth', 'login.accountLocked');
+  }
+
+  final isConnectionIssue = error is DioException &&
+      (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout);
+  if (isConnectionIssue || api.statusCode == 0) {
+    return l10n.t(
+      'auth',
+      scope == AuthErrorScope.register
+          ? 'register.serverError'
+          : 'login.serverError',
+    );
+  }
+
+  if (scope == AuthErrorScope.google) {
+    if (api.message.isNotEmpty) return api.message;
+    return l10n.t('auth', 'login.googleFailed');
+  }
+
+  if (api.message.isNotEmpty) return api.message;
+  return l10n.t(
+    'auth',
+    scope == AuthErrorScope.register ? 'register.failed' : 'login.failed',
+  );
+}
 
 final googleSignInProvider = Provider<GoogleSignIn>((ref) {
   final clientId = Env.googleServerClientId;
@@ -17,10 +65,12 @@ final authApiProvider = Provider<AuthApi>((ref) {
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final l10n = ref.watch(l10nBundleProvider).requireValue;
   return AuthRepository(
     api: ref.read(authApiProvider),
     tokenStore: ref.read(tokenStoreProvider),
     googleSignIn: ref.read(googleSignInProvider),
+    authString: (key) => l10n.t('auth', key),
   );
 });
 

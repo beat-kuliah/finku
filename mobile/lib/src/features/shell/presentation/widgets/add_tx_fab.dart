@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
 
 /// Pulsing gradient FAB used to open the Add Transaction sheet.
@@ -42,7 +43,7 @@ class _AddTxFabState extends State<AddTxFab>
         return Transform.scale(
           scale: scale,
           child: Semantics(
-            label: 'Tambah transaksi',
+            label: context.l10n.t('nav', 'addTransaction'),
             button: true,
             child: Container(
               width: 60,

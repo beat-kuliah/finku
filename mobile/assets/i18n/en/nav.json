@@ -1,0 +1,18 @@
+{
+  "dashboard": "Dashboard",
+  "transactions": "Transactions",
+  "stats": "Stats",
+  "budget": "Budget",
+  "goals": "Goals",
+  "wallets": "Wallets",
+  "profile": "Profile",
+  "home": "Home",
+  "more": "More",
+  "logout": "Log out",
+  "appName": "FinKu App",
+  "addTransaction": "Add transaction",
+  "moreAriaActive": "{{label}}, open more menu",
+  "moreAria": "More",
+  "notificationsToast": "Notifications: push not available yet — settings are in Profile.",
+  "moreSheetTitle": "More"
+}

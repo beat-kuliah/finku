@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
 
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
+import 'package:finku_mobile/src/features/shell/presentation/shell_branch.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/glass_card.dart';
+
+/// Nav labels for shell branches (shared by [AppShell] and branch pages).
+extension ShellBranchL10n on ShellBranch {
+  String navLabel(L10nBundle l10n) {
+    final key = switch (this) {
+      ShellBranch.dashboard => 'home',
+      _ => name,
+    };
+    return l10n.t('nav', key);
+  }
+
+  String navSubheader(L10nBundle l10n) => l10n.t('nav', '${name}Subheader');
+}
 
 /// Reusable "Coming soon" section used by every placeholder branch page.
 class PlaceholderSection extends StatelessWidget {

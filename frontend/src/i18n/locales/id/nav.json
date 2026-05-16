@@ -14,5 +14,12 @@
   "moreAriaActive": "{{label}}, buka menu lainnya",
   "moreAria": "Lainnya",
   "notificationsToast": "Notifikasi: belum ada push — pengaturan ada di Profil.",
-  "moreSheetTitle": "Lainnya"
+  "moreSheetTitle": "Lainnya",
+  "dashboardSubheader": "Ringkasan finansial",
+  "transactionsSubheader": "Catatan masuk & keluar",
+  "walletsSubheader": "Dompet & rekening",
+  "budgetSubheader": "Pagu pengeluaran",
+  "statsSubheader": "Insight pengeluaran",
+  "goalsSubheader": "Target tabungan",
+  "profileSubheader": "Pengaturan akun"
 }

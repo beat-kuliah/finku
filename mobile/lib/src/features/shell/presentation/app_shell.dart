@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
+import 'package:finku_mobile/src/features/shell/presentation/shell_branch.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/add_transaction_sheet.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/add_tx_fab.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/blob_background.dart';
@@ -13,31 +16,7 @@ import 'package:finku_mobile/src/features/shell/presentation/widgets/bottom_nav_
 import 'package:finku_mobile/src/features/shell/presentation/widgets/finku_logo.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/more_sheet.dart';
 
-/// Branches inside the shell — order MUST match `StatefulShellRoute.indexedStack`.
-enum ShellBranch {
-  dashboard('Beranda', 'Ringkasan finansial'),
-  transactions('Transaksi', 'Catatan masuk & keluar'),
-  wallets('Dompet', 'Dompet & rekening'),
-  budget('Budget', 'Pagu pengeluaran'),
-  stats('Statistik', 'Insight pengeluaran'),
-  goals('Target', 'Target tabungan'),
-  profile('Profil', 'Pengaturan akun');
-
-  const ShellBranch(this.title, this.subtitle);
-
-  final String title;
-  final String subtitle;
-
-  /// Routing index matches the declaration order (built-in `Enum.index`).
-  int get branchIndex => index;
-
-  static ShellBranch fromIndex(int index) {
-    if (index < 0 || index >= ShellBranch.values.length) {
-      return ShellBranch.dashboard;
-    }
-    return ShellBranch.values[index];
-  }
-}
+import 'package:finku_mobile/src/features/shell/presentation/widgets/placeholder_section.dart';
 
 /// Slots that live INSIDE the bottom dock.
 const _dockBranches = <ShellBranch>[
@@ -78,6 +57,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   ShellBranch? _cachedDockItemsBranch;
+  String? _cachedDockLocaleCode;
   List<BottomNavItemData>? _cachedDockItems;
 
   void _go(ShellBranch branch) {
@@ -117,6 +97,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.l10n;
     final activeBranch = ShellBranch.fromIndex(widget.navigationShell.currentIndex);
     final width = MediaQuery.sizeOf(context).width;
     final useRail = width >= _kRailBreakpoint;
@@ -154,7 +135,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 minimum: const EdgeInsets.only(bottom: _kDockBottomInset),
                 child: BottomNavBar(
                   activeIndex: _activeDockIndex(activeBranch),
-                  items: _dockItemsFor(activeBranch),
+                  items: _dockItemsFor(activeBranch, l10n),
                 ),
               ),
             ),
@@ -187,43 +168,51 @@ class _AppShellState extends ConsumerState<AppShell> {
     return _dockBranches.length;
   }
 
-  List<BottomNavItemData> _dockItemsFor(ShellBranch active) {
-    if (_cachedDockItems != null && _cachedDockItemsBranch == active) {
+  List<BottomNavItemData> _dockItemsFor(ShellBranch active, L10nBundle l10n) {
+    final localeCode = l10n.locale.languageCode;
+    if (_cachedDockItems != null &&
+        _cachedDockItemsBranch == active &&
+        _cachedDockLocaleCode == localeCode) {
       return _cachedDockItems!;
     }
     _cachedDockItemsBranch = active;
-    _cachedDockItems = _buildDockItems(active);
+    _cachedDockLocaleCode = localeCode;
+    _cachedDockItems = _buildDockItems(active, l10n);
     return _cachedDockItems!;
   }
 
-  List<BottomNavItemData> _buildDockItems(ShellBranch active) {
+  List<BottomNavItemData> _buildDockItems(ShellBranch active, L10nBundle l10n) {
     final moreIsActive = _moreBranches.contains(active);
-    final moreLabel = moreIsActive ? active.title : 'Lainnya';
+    final moreLabel =
+        moreIsActive ? active.navLabel(l10n) : l10n.t('nav', 'more');
 
     return [
       BottomNavItemData(
         icon: Icons.dashboard_rounded,
-        label: 'Beranda',
+        label: ShellBranch.dashboard.navLabel(l10n),
         onTap: () => _go(ShellBranch.dashboard),
       ),
       BottomNavItemData(
         icon: Icons.receipt_long_rounded,
-        label: 'Transaksi',
+        label: ShellBranch.transactions.navLabel(l10n),
         onTap: () => _go(ShellBranch.transactions),
       ),
       BottomNavItemData(
         icon: Icons.account_balance_wallet_rounded,
-        label: 'Dompet',
+        label: ShellBranch.wallets.navLabel(l10n),
         onTap: () => _go(ShellBranch.wallets),
       ),
       BottomNavItemData(
         icon: Icons.savings_rounded,
-        label: 'Budget',
+        label: ShellBranch.budget.navLabel(l10n),
         onTap: () => _go(ShellBranch.budget),
       ),
       BottomNavItemData(
         icon: Icons.more_horiz_rounded,
         label: moreLabel,
+        semanticsLabel: moreIsActive
+            ? l10n.t('nav', 'moreAriaActive', args: {'label': moreLabel})
+            : l10n.t('nav', 'moreAria'),
         onTap: _openMoreSheet,
       ),
     ];
@@ -270,6 +259,7 @@ class _ShellHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final auth = ref.watch(authControllerProvider).valueOrNull;
@@ -309,7 +299,7 @@ class _ShellHeader extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              activeBranch.subtitle,
+                              activeBranch.navSubheader(l10n),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: scheme.onSurface.withValues(alpha: 0.6),
@@ -317,7 +307,7 @@ class _ShellHeader extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              activeBranch.title,
+                              activeBranch.navLabel(l10n),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -338,8 +328,8 @@ class _ShellHeader extends ConsumerWidget {
                       icon: Icons.notifications_outlined,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Notifikasi: belum ada — pengaturan ada di Profil.'),
+                          SnackBar(
+                            content: Text(l10n.t('nav', 'notificationsToast')),
                           ),
                         );
                       },
@@ -416,6 +406,7 @@ class _RailLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final railBg = isDark
@@ -425,7 +416,8 @@ class _RailLayout extends ConsumerWidget {
         ? Colors.white.withValues(alpha: 0.06)
         : Colors.black.withValues(alpha: 0.06);
 
-    final destinations = ShellBranch.values.map(_destinationFor).toList();
+    final destinations =
+        ShellBranch.values.map((b) => _destinationFor(b, l10n)).toList();
 
     return Row(
       children: [
@@ -460,7 +452,7 @@ class _RailLayout extends ConsumerWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: IconButton(
-                          tooltip: 'Keluar',
+                          tooltip: l10n.t('nav', 'logout'),
                           onPressed: () {
                             ref.read(authControllerProvider.notifier).logout();
                           },
@@ -480,7 +472,7 @@ class _RailLayout extends ConsumerWidget {
     );
   }
 
-  NavigationRailDestination _destinationFor(ShellBranch branch) {
+  NavigationRailDestination _destinationFor(ShellBranch branch, L10nBundle l10n) {
     final icon = switch (branch) {
       ShellBranch.dashboard => Icons.dashboard_rounded,
       ShellBranch.transactions => Icons.receipt_long_rounded,
@@ -490,10 +482,11 @@ class _RailLayout extends ConsumerWidget {
       ShellBranch.goals => Icons.flag_rounded,
       ShellBranch.profile => Icons.person_rounded,
     };
+    final labelKey = branch == ShellBranch.dashboard ? 'dashboard' : branch.name;
     return NavigationRailDestination(
       icon: Icon(icon),
       selectedIcon: Icon(icon),
-      label: Text(branch.title),
+      label: Text(l10n.t('nav', labelKey)),
     );
   }
 }

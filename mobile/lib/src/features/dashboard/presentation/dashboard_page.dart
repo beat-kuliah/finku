@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:finku_mobile/src/core/errors/api_error.dart';
+import 'package:finku_mobile/src/core/l10n/app_locale.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
+import 'package:finku_mobile/src/core/l10n/locale_controller.dart';
+import 'package:finku_mobile/src/core/presentation/format_dates.dart';
 import 'package:finku_mobile/src/core/presentation/format_idr.dart';
 import 'package:finku_mobile/src/core/presentation/finku_empty_state.dart';
 import 'package:finku_mobile/src/core/presentation/finku_list_skeleton.dart';
@@ -13,43 +18,56 @@ import 'package:finku_mobile/src/features/shell/presentation/widgets/glass_card.
 import 'package:finku_mobile/src/features/shell/presentation/widgets/placeholder_section.dart';
 import 'package:finku_mobile/src/features/summary/data/dto/summary_dto.dart';
 
+DateTime? _parseIsoDate(String iso) {
+  try {
+    return DateTime.parse(iso).toLocal();
+  } catch (_) {
+    return null;
+  }
+}
+
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
+    final locale = ref.watch(localeControllerProvider);
     final auth = ref.watch(authControllerProvider).valueOrNull;
     final fullName = auth?.user?.name.trim();
     final name = (fullName == null || fullName.isEmpty)
-        ? 'Sahabat FinKu'
+        ? 'FinKu'
         : fullName.split(' ').first;
+
+    final greeting = l10n.t('dashboard', 'greetingName', args: {'name': name});
+    final subtitle = l10n.t('nav', 'home');
 
     final asyncDash = ref.watch(dashboardDataProvider);
 
     return asyncDash.when(
       data: (d) => BranchScaffold(
-        title: 'Halo, $name 👋',
-        subtitle: 'Beranda',
+        title: greeting,
+        subtitle: subtitle,
         children: [
-          _SummaryStrip(data: d),
+          _SummaryStrip(data: d, l10n: l10n),
           const SizedBox(height: 16),
-          _PeriodCard(data: d),
+          _PeriodCard(data: d, l10n: l10n, locale: locale),
           const SizedBox(height: 16),
-          _LatestSection(latest: d.latestTransactions),
+          _LatestSection(latest: d.latestTransactions, l10n: l10n),
         ],
       ),
       loading: () => BranchScaffold(
-        title: 'Halo, $name 👋',
-        subtitle: 'Beranda',
+        title: greeting,
+        subtitle: subtitle,
         children: const [FinkuListSkeleton(count: 4)],
       ),
       error: (e, _) => BranchScaffold(
-        title: 'Halo, $name 👋',
-        subtitle: 'Beranda',
+        title: greeting,
+        subtitle: subtitle,
         children: [
           FinkuEmptyState(
             icon: Icons.cloud_off_rounded,
-            title: 'Gagal memuat beranda',
+            title: l10n.t('dashboard', 'loadFailed'),
             message: e is ApiError ? e.message : e.toString(),
           ),
         ],
@@ -59,9 +77,10 @@ class DashboardPage extends ConsumerWidget {
 }
 
 class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.data});
+  const _SummaryStrip({required this.data, required this.l10n});
 
   final DashboardPayloadDto data;
+  final L10nBundle l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +91,7 @@ class _SummaryStrip extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Saldo total',
+            l10n.t('dashboard', 'totalBalance'),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -94,7 +113,7 @@ class _SummaryStrip extends StatelessWidget {
             children: [
               Expanded(
                 child: _MiniStat(
-                  label: 'Pemasukan periode',
+                  label: l10n.t('dashboard', 'incomePeriod'),
                   amount: data.periodIncome,
                   positive: true,
                 ),
@@ -102,7 +121,7 @@ class _SummaryStrip extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _MiniStat(
-                  label: 'Pengeluaran periode',
+                  label: l10n.t('dashboard', 'expensePeriod'),
                   amount: data.periodExpense,
                   positive: false,
                 ),
@@ -160,20 +179,33 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _PeriodCard extends StatelessWidget {
-  const _PeriodCard({required this.data});
+  const _PeriodCard({
+    required this.data,
+    required this.l10n,
+    required this.locale,
+  });
 
   final DashboardPayloadDto data;
+  final L10nBundle l10n;
+  final AppLocale locale;
+
+  String _fmt(String iso) {
+    final d = _parseIsoDate(iso);
+    if (d == null) return iso;
+    return formatDate(d, locale, pattern: 'd/M');
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final expenseLabel = l10n.t('dashboard', 'expense');
     return GlassCard(
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Periode ringkasan',
+            l10n.t('dashboard', 'thisPeriod'),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -208,7 +240,7 @@ class _PeriodCard extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                           child: Semantics(
-                            label: 'Pengeluaran ${_fmt(p.date)}',
+                            label: '$expenseLabel ${_fmt(p.date)}',
                             value: formatIdr(p.expense),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.end,
@@ -232,7 +264,7 @@ class _PeriodCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Batang: pengeluaran 7 hari terakhir (skala relatif)',
+              l10n.t('dashboard', 'chartBarsCaption'),
               style: TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.55)),
             ),
           ],
@@ -240,30 +272,22 @@ class _PeriodCard extends StatelessWidget {
       ),
     );
   }
-
-  String _fmt(String iso) {
-    try {
-      final d = DateTime.parse(iso).toLocal();
-      return '${d.day}/${d.month}';
-    } catch (_) {
-      return iso;
-    }
-  }
 }
 
 class _LatestSection extends StatelessWidget {
-  const _LatestSection({required this.latest});
+  const _LatestSection({required this.latest, required this.l10n});
 
   final List<LatestTransactionItemDto> latest;
+  final L10nBundle l10n;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     if (latest.isEmpty) {
-      return const FinkuEmptyState(
+      return FinkuEmptyState(
         icon: Icons.receipt_long_rounded,
-        title: 'Belum ada aktivitas',
-        message: 'Transaksi terbaru akan muncul di sini.',
+        title: l10n.t('dashboard', 'emptyActivityTitle'),
+        message: l10n.t('dashboard', 'emptyActivityMessage'),
       );
     }
     return GlassCard(
@@ -272,7 +296,7 @@ class _LatestSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Aktivitas terbaru',
+            l10n.t('dashboard', 'latestTransactions'),
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,

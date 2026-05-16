@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:finku_mobile/src/core/errors/api_error.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/presentation/finku_empty_state.dart';
 import 'package:finku_mobile/src/core/presentation/finku_list_skeleton.dart';
 import 'package:finku_mobile/src/core/presentation/money_text.dart';
@@ -17,27 +19,28 @@ class WalletsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
     final async = ref.watch(walletsDataProvider);
 
     return async.when(
       data: (snap) {
         if (snap.wallets.isEmpty) {
-          return const BranchScaffold(
-            title: 'Dompet',
-            subtitle: 'Dompet & rekening',
+          return BranchScaffold(
+            title: l10n.t('wallets', 'title'),
+            subtitle: l10n.t('wallets', 'subtitle'),
             children: [
               FinkuEmptyState(
                 icon: Icons.account_balance_wallet_rounded,
-                title: 'Belum ada dompet',
-                message: 'Tambah dompet dari web dulu, atau tunggu fitur tambah dompet di mobile.',
+                title: l10n.t('wallets', 'noActive'),
+                message: l10n.t('wallets', 'emptyHint'),
               ),
             ],
           );
         }
-        final byGroup = _groupWallets(snap.wallets, snap.groups);
+        final byGroup = _groupWallets(snap.wallets, snap.groups, l10n);
         return BranchScaffold(
-          title: 'Dompet',
-          subtitle: 'Dompet & rekening',
+          title: l10n.t('wallets', 'title'),
+          subtitle: l10n.t('wallets', 'subtitle'),
           children: [
             ...byGroup.entries.map((e) {
               return Padding(
@@ -65,18 +68,18 @@ class WalletsPage extends ConsumerWidget {
           ],
         );
       },
-      loading: () => const BranchScaffold(
-        title: 'Dompet',
-        subtitle: 'Dompet & rekening',
-        children: [FinkuListSkeleton(count: 4)],
+      loading: () => BranchScaffold(
+        title: l10n.t('wallets', 'title'),
+        subtitle: l10n.t('wallets', 'subtitle'),
+        children: const [FinkuListSkeleton(count: 4)],
       ),
       error: (e, _) => BranchScaffold(
-        title: 'Dompet',
-        subtitle: 'Dompet & rekening',
+        title: l10n.t('wallets', 'title'),
+        subtitle: l10n.t('wallets', 'subtitle'),
         children: [
           FinkuEmptyState(
             icon: Icons.error_outline_rounded,
-            title: 'Gagal memuat dompet',
+            title: l10n.t('wallets', 'loadFailed'),
             message: e is ApiError ? e.message : e.toString(),
           ),
         ],
@@ -84,17 +87,23 @@ class WalletsPage extends ConsumerWidget {
     );
   }
 
-  Map<String, List<WalletDto>> _groupWallets(List<WalletDto> wallets, List<WalletGroupDto> groups) {
+  Map<String, List<WalletDto>> _groupWallets(
+    List<WalletDto> wallets,
+    List<WalletGroupDto> groups,
+    L10nBundle l10n,
+  ) {
+    final ungrouped = l10n.t('wallets', 'ungrouped');
+    final groupFallback = l10n.t('wallets', 'groupFallback');
     final nameById = {for (final g in groups) g.id: g.name};
     final map = <String, List<WalletDto>>{};
     for (final w in wallets) {
       final gid = w.groupId;
-      final key = (gid != null && gid.isNotEmpty) ? (nameById[gid] ?? 'Grup') : 'Tanpa grup';
+      final key = (gid != null && gid.isNotEmpty) ? (nameById[gid] ?? groupFallback) : ungrouped;
       map.putIfAbsent(key, () => []).add(w);
     }
     final ordered = <String, List<WalletDto>>{};
-    if (map.containsKey('Tanpa grup')) {
-      ordered['Tanpa grup'] = map['Tanpa grup']!;
+    if (map.containsKey(ungrouped)) {
+      ordered[ungrouped] = map[ungrouped]!;
     }
     for (final g in groups) {
       if (map.containsKey(g.name)) ordered[g.name] = map[g.name]!;

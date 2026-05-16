@@ -73,10 +73,46 @@ Semua endpoint mobile auth mengembalikan refresh token di JSON body (bukan cooki
 Struktur utama:
 
 - `lib/src/core/config`: env
+- `lib/src/core/l10n`: locale persistence, JSON bundle loader, `context.l10n`
 - `lib/src/core/network`: Dio + auth interceptor
 - `lib/src/core/secure_storage`: token store
 - `lib/src/core/router`: `go_router` guard auth
 - `lib/src/features/auth`: data/domain/presentation auth MVP
+
+## Internationalization (ID + EN)
+
+UI copy lives in `assets/i18n/{id,en}/*.json`, mirrored from the web app (`frontend/src/i18n/locales`, excluding `landing.json`). Keys match the web namespaces (`auth`, `nav`, `dashboard`, etc.).
+
+### Sync translations from web
+
+From the repo root:
+
+```bash
+./scripts/sync-mobile-l10n.sh
+```
+
+Then run the app or tests so Flutter picks up asset changes.
+
+### Locale behavior
+
+- Storage key: `finku-locale` (`id` | `en`), same as web
+- Default: saved value, else system language (`id*` → Indonesian, otherwise English), else `id`
+- Dates: `format_dates.dart` only — do not call `DateFormat` with a hardcoded locale elsewhere
+
+### Manual test: language picker
+
+1. Run the app and sign in (or use an existing session).
+2. Open **Profile** (More → Profile, or the profile tab).
+3. Under **Language**, tap **English** — bottom nav labels should switch to English (e.g. Transactions, Wallets).
+4. Confirm a snackbar shows the language-changed message.
+5. Force-quit the app and reopen — language should still be English.
+6. Switch back to **Indonesia** and spot-check Dashboard/Stats date formatting.
+
+### Analyzer & tests
+
+```bash
+cd mobile && flutter analyze && flutter test
+```
 
 ## Next Iterations
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:finku_mobile/src/core/errors/api_error.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/network/dio_api_mapper.dart';
 import 'package:finku_mobile/src/core/presentation/format_idr.dart';
 import 'package:finku_mobile/src/core/presentation/finku_primary_sheet.dart';
@@ -166,13 +167,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
   }
 
   Future<void> _submit() async {
+    String tx(String key) => ref.l10n.t('transactions', key);
     final amt = _parseAmount();
     if (amt == null) {
-      _toast('Masukkan jumlah valid.');
+      _toast(tx('modal.invalidAmount'));
       return;
     }
     if (_walletId.isEmpty) {
-      _toast('Pilih dompet.');
+      _toast(tx('modal.selectWallet'));
       return;
     }
 
@@ -181,11 +183,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
 
     if (_tab == _TxTab.transfer) {
       if (_destWalletId.isEmpty || _destWalletId == _walletId) {
-        _toast('Pilih dompet tujuan yang berbeda.');
+        _toast(tx('modal.selectDestWallet'));
         return;
       }
     } else if (_categoryId.isEmpty) {
-      _toast('Pilih kategori.');
+      _toast(tx('modal.selectCategory'));
       return;
     }
 
@@ -215,10 +217,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
-        messenger.showSnackBar(const SnackBar(content: Text('Transaksi tersimpan.')));
+        messenger.showSnackBar(
+          SnackBar(content: Text(tx('modal.saved'))),
+        );
       }
     } catch (e) {
-      final msg = e is ApiError ? e.message : e.toString();
+      final msg = e is ApiError ? e.message : tx('modal.saveFailed');
       _toast(msg);
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -246,20 +250,22 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.l10n;
+    String tx(String key) => l10n.t('transactions', key);
     final scheme = Theme.of(context).colorScheme;
     final mq = MediaQuery.of(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
       child: FinkuPrimarySheet(
-        title: 'Tambah transaksi',
-        subtitle: 'Catat pemasukan, pengeluaran, atau transfer',
+        title: tx('modal.title'),
+        subtitle: l10n.t('nav', 'addTransaction'),
         maxHeightFraction: 0.92,
         scrollBody: false,
         onClose: () => Navigator.of(context).pop(),
         footer: GradientButton(
           onPressed: _saving || _loading ? null : () => _submit(),
-          child: Text(_saving ? 'Menyimpan…' : 'Simpan'),
+          child: Text(_saving ? tx('saving') : tx('save')),
         ),
         child: Column(
           children: [
@@ -277,22 +283,29 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                 labelColor: Colors.white,
                 unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.65),
                 labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                tabs: const [
-                  Tab(text: 'Pengeluaran'),
-                  Tab(text: 'Pemasukan'),
-                  Tab(text: 'Transfer'),
+                tabs: [
+                  Tab(text: tx('expense')),
+                  Tab(text: tx('income')),
+                  Tab(text: tx('transfer')),
                 ],
               ),
             ),
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: Text(
+                        tx('loading'),
+                        style: TextStyle(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
+                        ),
+                      ),
+                    )
                   : _loadError != null
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
                             child: Text(
-                              _loadError!,
+                              '${tx('modal.loadFailed')}\n$_loadError',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: scheme.error),
                             ),
@@ -305,7 +318,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Text(
-                                'Jumlah (IDR)',
+                                tx('modal.amount'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -316,11 +329,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                               TextField(
                                 controller: _amountCtrl,
                                 keyboardType: TextInputType.number,
-                                decoration: _inputDecoration(context, hintText: '50000'),
+                                decoration: _inputDecoration(
+                                  context,
+                                  hintText: tx('modal.amountPlaceholder'),
+                                ),
                               ),
                               const SizedBox(height: 14),
                               Text(
-                                'Tanggal',
+                                tx('modal.date'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -338,7 +354,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                               ),
                               const SizedBox(height: 14),
                               Text(
-                                'Dompet',
+                                tx('modal.wallet'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -365,7 +381,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                               if (_tab == _TxTab.transfer) ...[
                                 const SizedBox(height: 14),
                                 Text(
-                                  'Dompet tujuan',
+                                  tx('modal.destWallet'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -391,7 +407,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                               ] else ...[
                                 const SizedBox(height: 14),
                                 Text(
-                                  'Kategori',
+                                  tx('modal.category'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -418,7 +434,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                               ],
                               const SizedBox(height: 14),
                               Text(
-                                'Catatan (opsional)',
+                                tx('modal.note'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,

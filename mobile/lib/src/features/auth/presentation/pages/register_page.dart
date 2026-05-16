@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:finku_mobile/src/features/auth/data/auth_api.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
 import 'package:finku_mobile/src/features/auth/presentation/widgets/auth_scaffold.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/gradient_button.dart';
@@ -40,19 +41,24 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           );
       if (mounted) context.go('/dashboard');
     } catch (e) {
-      final err = AuthApi.mapDioError(e);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(localizedAuthError(ref, e, AuthErrorScope.register)),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(l10nBundleProvider);
+    final l10n = context.l10n;
     final loading = ref.watch(authControllerProvider).isLoading;
 
     return AuthScaffold(
-      title: 'Mulai dengan FinKu',
-      subtitle: 'Buat akun gratis untuk catat keuangan dengan rapi.',
+      title: l10n.t('auth', 'registerPage.title'),
+      subtitle: l10n.t('auth', 'registerPage.subtitle'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -60,9 +66,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             controller: _name,
             textInputAction: TextInputAction.next,
             enabled: !loading,
-            decoration: const InputDecoration(
-              labelText: 'Nama lengkap',
-              prefixIcon: Icon(Icons.badge_outlined, size: 18),
+            decoration: InputDecoration(
+              labelText: l10n.t('auth', 'registerPage.nameLabel'),
+              prefixIcon: const Icon(Icons.badge_outlined, size: 18),
             ),
           ),
           const SizedBox(height: 12),
@@ -70,9 +76,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             controller: _username,
             textInputAction: TextInputAction.next,
             enabled: !loading,
-            decoration: const InputDecoration(
-              labelText: 'Username',
-              prefixIcon: Icon(Icons.alternate_email_rounded, size: 18),
+            decoration: InputDecoration(
+              labelText: l10n.t('auth', 'registerPage.usernameLabel'),
+              prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18),
             ),
           ),
           const SizedBox(height: 12),
@@ -81,9 +87,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             enabled: !loading,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.email_outlined, size: 18),
+            decoration: InputDecoration(
+              labelText: l10n.t('auth', 'registerPage.emailLabel'),
+              prefixIcon: const Icon(Icons.email_outlined, size: 18),
             ),
           ),
           const SizedBox(height: 12),
@@ -94,10 +100,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             enabled: !loading,
             onSubmitted: (_) => _submit(),
             decoration: InputDecoration(
-              labelText: 'Password',
+              labelText: l10n.t('auth', 'registerPage.passwordLabel'),
               prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18),
               suffixIcon: IconButton(
-                tooltip: _showPassword ? 'Sembunyikan' : 'Tampilkan',
+                tooltip: l10n.t('auth', 'registerPage.togglePassword'),
                 onPressed: () => setState(() => _showPassword = !_showPassword),
                 icon: Icon(
                   _showPassword
@@ -112,12 +118,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           GradientButton(
             onPressed: loading ? null : _submit,
             loading: loading,
-            child: const Text('Daftar'),
+            child: Text(
+              loading
+                  ? l10n.t('auth', 'registerPage.submitting')
+                  : l10n.t('auth', 'registerPage.submit'),
+            ),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: loading ? null : () => context.go('/login'),
-            child: const Text('Sudah punya akun? Login'),
+            child: Text(
+              '${l10n.t('auth', 'registerPage.hasAccount')} ${l10n.t('auth', 'registerPage.loginLink')}',
+            ),
           ),
         ],
       ),

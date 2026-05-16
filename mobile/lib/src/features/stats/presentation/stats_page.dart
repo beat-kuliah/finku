@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:finku_mobile/src/core/errors/api_error.dart';
+import 'package:finku_mobile/src/core/l10n/app_locale.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
+import 'package:finku_mobile/src/core/l10n/locale_controller.dart';
+import 'package:finku_mobile/src/core/presentation/format_dates.dart';
 import 'package:finku_mobile/src/core/presentation/finku_empty_state.dart';
 import 'package:finku_mobile/src/core/presentation/finku_list_skeleton.dart';
 import 'package:finku_mobile/src/core/presentation/money_text.dart';
@@ -11,30 +16,37 @@ import 'package:finku_mobile/src/features/shell/presentation/widgets/placeholder
 import 'package:finku_mobile/src/features/stats/presentation/providers/stats_provider.dart';
 import 'package:finku_mobile/src/features/summary/data/dto/summary_dto.dart';
 
+DateTime? _parseIsoDate(String iso) {
+  try {
+    return DateTime.parse(iso).toLocal();
+  } catch (_) {
+    return null;
+  }
+}
+
 class StatsPage extends ConsumerWidget {
   const StatsPage({super.key});
 
-  static String _monthTitle(DateTime d) {
-    const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-    ];
-    return '${months[d.month - 1]} ${d.year}';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
+    final locale = ref.watch(localeControllerProvider);
     final async = ref.watch(statsDataProvider);
+    final month = ref.watch(statsMonthProvider);
+
+    final title = l10n.t('stats', 'title');
+    final subtitle = l10n.t('stats', 'subtitle');
+    final monthTitle = formatDate(month, locale, pattern: 'MMMM y');
 
     return async.when(
       data: (s) => BranchScaffold(
-        title: 'Statistik',
-        subtitle: 'Insight pengeluaran',
+        title: title,
+        subtitle: subtitle,
         children: [
           Row(
             children: [
               IconButton(
-                tooltip: 'Bulan sebelumnya',
+                tooltip: l10n.t('stats', 'prevMonth'),
                 onPressed: () {
                   final m = ref.read(statsMonthProvider);
                   ref.read(statsMonthProvider.notifier).state = DateTime(m.year, m.month - 1);
@@ -43,13 +55,13 @@ class StatsPage extends ConsumerWidget {
               ),
               Expanded(
                 child: Text(
-                  _monthTitle(ref.watch(statsMonthProvider)),
+                  monthTitle,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
               ),
               IconButton(
-                tooltip: 'Bulan berikutnya',
+                tooltip: l10n.t('stats', 'nextMonth'),
                 onPressed: () {
                   final m = ref.read(statsMonthProvider);
                   ref.read(statsMonthProvider.notifier).state = DateTime(m.year, m.month + 1);
@@ -59,34 +71,35 @@ class StatsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          _TotalsRow(data: s),
+          _TotalsRow(data: s, l10n: l10n),
           const SizedBox(height: 16),
-          _PeriodLabel(data: s),
+          _PeriodLabel(data: s, l10n: l10n, locale: locale),
           const SizedBox(height: 16),
           if (s.categoryBreakdown.isEmpty)
-            const FinkuEmptyState(
+            FinkuEmptyState(
               icon: Icons.pie_chart_outline_rounded,
-              title: 'Belum ada data',
-              message: 'Tambah transaksi untuk melihat breakdown kategori.',
+              title: l10n.t('stats', 'noData'),
+              message: l10n.t('stats', 'emptyBreakdownHint'),
             )
           else
-            _CategoryList(items: s.categoryBreakdown),
+            _CategoryList(items: s.categoryBreakdown, l10n: l10n),
           const SizedBox(height: 16),
-          if (s.weeklyExpense.isNotEmpty) _WeeklyList(items: s.weeklyExpense),
+          if (s.weeklyExpense.isNotEmpty)
+            _WeeklyList(items: s.weeklyExpense, l10n: l10n, locale: locale),
         ],
       ),
-      loading: () => const BranchScaffold(
-        title: 'Statistik',
-        subtitle: 'Insight pengeluaran',
-        children: [FinkuListSkeleton(count: 5)],
+      loading: () => BranchScaffold(
+        title: title,
+        subtitle: subtitle,
+        children: const [FinkuListSkeleton(count: 5)],
       ),
       error: (e, _) => BranchScaffold(
-        title: 'Statistik',
-        subtitle: 'Insight pengeluaran',
+        title: title,
+        subtitle: subtitle,
         children: [
           FinkuEmptyState(
             icon: Icons.error_outline_rounded,
-            title: 'Gagal memuat statistik',
+            title: l10n.t('stats', 'loadFailed'),
             message: e is ApiError ? e.message : e.toString(),
           ),
         ],
@@ -96,9 +109,10 @@ class StatsPage extends ConsumerWidget {
 }
 
 class _TotalsRow extends StatelessWidget {
-  const _TotalsRow({required this.data});
+  const _TotalsRow({required this.data, required this.l10n});
 
   final StatsPayloadDto data;
+  final L10nBundle l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +126,7 @@ class _TotalsRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Pemasukan',
+                  l10n.t('stats', 'totalIncome'),
                   style: TextStyle(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.6),
@@ -134,7 +148,7 @@ class _TotalsRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Pengeluaran',
+                  l10n.t('stats', 'totalExpense'),
                   style: TextStyle(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.6),
@@ -158,15 +172,30 @@ class _TotalsRow extends StatelessWidget {
 }
 
 class _PeriodLabel extends StatelessWidget {
-  const _PeriodLabel({required this.data});
+  const _PeriodLabel({
+    required this.data,
+    required this.l10n,
+    required this.locale,
+  });
 
   final StatsPayloadDto data;
+  final L10nBundle l10n;
+  final AppLocale locale;
+
+  String _short(String iso) {
+    final d = _parseIsoDate(iso);
+    if (d == null) return iso;
+    return formatDate(d, locale, pattern: 'd/M/y');
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Text(
-      'Periode ${_short(data.periodFrom)} – ${_short(data.periodTo)}',
+      l10n.t('stats', 'period', args: {
+        'from': _short(data.periodFrom),
+        'to': _short(data.periodTo),
+      }),
       style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
@@ -174,33 +203,26 @@ class _PeriodLabel extends StatelessWidget {
       ),
     );
   }
-
-  String _short(String iso) {
-    try {
-      final d = DateTime.parse(iso).toLocal();
-      return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
 }
 
 class _CategoryList extends StatelessWidget {
-  const _CategoryList({required this.items});
+  const _CategoryList({required this.items, required this.l10n});
 
   final List<StatsCategoryBreakdownDto> items;
+  final L10nBundle l10n;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final maxV = items.map((e) => e.value).fold<int>(1, (a, b) => a > b ? a : b);
+    final archivedSuffix = l10n.t('stats', 'archivedSuffix');
     return GlassCard(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Per kategori',
+            l10n.t('stats', 'byCategory'),
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -210,6 +232,7 @@ class _CategoryList extends StatelessWidget {
           const SizedBox(height: 12),
           ...items.map((c) {
             final frac = maxV > 0 ? (c.value / maxV).clamp(0.0, 1.0) : 0.0;
+            final name = c.archived ? '${c.name}$archivedSuffix' : c.name;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Column(
@@ -219,7 +242,7 @@ class _CategoryList extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          c.archived ? '${c.name} (arsip)' : c.name,
+                          name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -259,9 +282,21 @@ class _CategoryList extends StatelessWidget {
 }
 
 class _WeeklyList extends StatelessWidget {
-  const _WeeklyList({required this.items});
+  const _WeeklyList({
+    required this.items,
+    required this.l10n,
+    required this.locale,
+  });
 
   final List<WeeklyExpenseDto> items;
+  final L10nBundle l10n;
+  final AppLocale locale;
+
+  String _weekLabel(String week) {
+    final d = _parseIsoDate(week.contains('T') ? week : '${week}T12:00:00');
+    if (d == null) return week;
+    return formatDate(d, locale, pattern: 'd MMM');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +307,7 @@ class _WeeklyList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Pengeluaran per minggu',
+            l10n.t('stats', 'weeklyExpense'),
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -287,7 +322,7 @@ class _WeeklyList extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      w.week,
+                      _weekLabel(w.week),
                       style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.75)),
                     ),
                   ),

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:finku_mobile/src/core/errors/api_error.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
+import 'package:finku_mobile/src/core/l10n/locale_controller.dart';
 import 'package:finku_mobile/src/core/network/dio_api_mapper.dart';
 import 'package:finku_mobile/src/core/presentation/finku_empty_state.dart';
 import 'package:finku_mobile/src/core/presentation/finku_list_skeleton.dart';
+import 'package:finku_mobile/src/core/presentation/format_dates.dart';
 import 'package:finku_mobile/src/core/presentation/money_text.dart';
 import 'package:finku_mobile/src/core/providers/api_providers.dart';
 import 'package:finku_mobile/src/core/providers/data_revision_provider.dart';
@@ -25,18 +28,25 @@ class BudgetPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.l10n;
+    final locale = ref.watch(localeControllerProvider);
     final month = ref.watch(budgetMonthProvider);
     final budgets = ref.watch(budgetsListProvider);
     final cats = ref.watch(expenseCategoriesProvider);
+    final monthLabel = formatDate(
+      DateTime(month.year, month.month, 1),
+      locale,
+      pattern: 'MMMM',
+    );
 
     return BranchScaffold(
-      title: 'Budget',
-      subtitle: 'Pagu pengeluaran',
+      title: l10n.t('budget', 'title'),
+      subtitle: l10n.t('budget', 'subtitle'),
       children: [
         Row(
           children: [
             IconButton(
-              tooltip: 'Bulan sebelumnya',
+              tooltip: l10n.t('budget', 'prevMonth'),
               onPressed: () {
                 ref.read(budgetMonthProvider.notifier).state =
                     DateTime(month.year, month.month - 1);
@@ -45,7 +55,7 @@ class BudgetPage extends ConsumerWidget {
             ),
             Expanded(
               child: Text(
-                '${_monthLabel(month)} ${month.year}',
+                '$monthLabel ${month.year}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
@@ -55,7 +65,7 @@ class BudgetPage extends ConsumerWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Bulan berikutnya',
+              tooltip: l10n.t('budget', 'nextMonth'),
               onPressed: () {
                 ref.read(budgetMonthProvider.notifier).state =
                     DateTime(month.year, month.month + 1);
@@ -72,17 +82,17 @@ class BudgetPage extends ConsumerWidget {
                 ? null
                 : () => _openAdd(context, ref, month, cats.valueOrNull ?? const []),
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Tambah budget'),
+            label: Text(l10n.t('budget', 'addBudget')),
           ),
         ),
         const SizedBox(height: 8),
         budgets.when(
           data: (items) {
             if (items.isEmpty) {
-              return const FinkuEmptyState(
+              return FinkuEmptyState(
                 icon: Icons.savings_rounded,
-                title: 'Belum ada budget',
-                message: 'Atur pagu per kategori pengeluaran untuk bulan ini.',
+                title: l10n.t('budget', 'noBudgets'),
+                message: l10n.t('budget', 'emptyMessage'),
               );
             }
             final totalLimit = items.fold<int>(0, (s, b) => s + b.limitAmount);
@@ -100,7 +110,7 @@ class BudgetPage extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Total terpakai',
+                            l10n.t('budget', 'totalUsed'),
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
                             ),
@@ -153,30 +163,12 @@ class BudgetPage extends ConsumerWidget {
           loading: () => const FinkuListSkeleton(count: 4),
           error: (e, _) => FinkuEmptyState(
             icon: Icons.error_outline_rounded,
-            title: 'Gagal memuat budget',
+            title: l10n.t('budget', 'loadFailed'),
             message: e is ApiError ? e.message : e.toString(),
           ),
         ),
       ],
     );
-  }
-
-  String _monthLabel(DateTime m) {
-    const names = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-    return names[m.month - 1];
   }
 
   Future<void> _openAdd(
@@ -185,9 +177,10 @@ class BudgetPage extends ConsumerWidget {
     DateTime month,
     List<CategoryDto> categories,
   ) async {
+    final l10n = context.l10n;
     if (categories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak ada kategori pengeluaran.')),
+        SnackBar(content: Text(l10n.t('budget', 'noExpenseCategories'))),
       );
       return;
     }
@@ -197,8 +190,9 @@ class BudgetPage extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
+        final dialogL10n = ctx.l10n;
         return AlertDialog(
-          title: const Text('Budget baru'),
+          title: Text(dialogL10n.t('budget', 'newBudget')),
           content: StatefulBuilder(
             builder: (ctx, setLocal) {
               return Column(
@@ -206,7 +200,7 @@ class BudgetPage extends ConsumerWidget {
                 children: [
                   DropdownButtonFormField<String>(
                     value: catId, // ignore: deprecated_member_use
-                    decoration: const InputDecoration(labelText: 'Kategori'),
+                    decoration: InputDecoration(labelText: dialogL10n.t('budget', 'category')),
                     items: categories
                         .map(
                           (c) => DropdownMenuItem(
@@ -221,8 +215,8 @@ class BudgetPage extends ConsumerWidget {
                   TextField(
                     controller: limitCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Limit (IDR)',
+                    decoration: InputDecoration(
+                      labelText: dialogL10n.t('budget', 'limit'),
                       hintText: '500000',
                     ),
                   ),
@@ -231,10 +225,13 @@ class BudgetPage extends ConsumerWidget {
             },
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(dialogL10n.t('budget', 'cancel')),
+            ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Simpan'),
+              child: Text(dialogL10n.t('budget', 'save')),
             ),
           ],
         );
@@ -246,7 +243,7 @@ class BudgetPage extends ConsumerWidget {
     final lim = int.tryParse(limitCtrl.text.replaceAll(RegExp(r'[^\d]'), ''));
     if (lim == null || lim <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Isi limit valid.')),
+        SnackBar(content: Text(l10n.t('budget', 'invalidForm'))),
       );
       return;
     }
@@ -258,7 +255,9 @@ class BudgetPage extends ConsumerWidget {
           );
       ref.read(dataRevisionProvider.notifier).state++;
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Budget ditambahkan.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('budget', 'added'))),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -270,26 +269,35 @@ class BudgetPage extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, String id) async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus budget?'),
-        content: const Text('Pagu untuk kategori ini akan dihapus.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final dialogL10n = ctx.l10n;
+        return AlertDialog(
+          title: Text(dialogL10n.t('budget', 'deleteTitle')),
+          content: Text(dialogL10n.t('budget', 'deleteBody')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(dialogL10n.t('budget', 'cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(dialogL10n.t('wallets', 'delete')),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true) return;
     try {
       await ref.read(budgetsApiProvider).delete(id);
       ref.read(dataRevisionProvider.notifier).state++;
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Budget dihapus.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('budget', 'deleted'))),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -309,11 +317,13 @@ class _BudgetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final frac = budget.limitAmount > 0
         ? (budget.spent / budget.limitAmount).clamp(0.0, 1.0)
         : 0.0;
-    final name = budget.categoryName ?? 'Kategori';
+    final name = budget.categoryName ?? l10n.t('budget', 'categoryFallback');
+    final pausedSuffix = budget.paused ? l10n.t('budget', 'paused') : '';
     return GlassCard(
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
       child: Row(
@@ -323,7 +333,7 @@ class _BudgetTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  budget.paused ? '$name · dijeda' : name,
+                  '$name$pausedSuffix',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
@@ -357,7 +367,7 @@ class _BudgetTile extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Hapus',
+            tooltip: l10n.t('wallets', 'delete'),
             onPressed: onDelete,
             icon: Icon(Icons.delete_outline_rounded, color: scheme.error.withValues(alpha: 0.85)),
           ),

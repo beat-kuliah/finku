@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
+import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/blob_background.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/finku_logo.dart';
 
-class SplashPage extends StatelessWidget {
+class SplashPage extends ConsumerWidget {
   const SplashPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(l10nBundleProvider);
+    final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -32,7 +37,7 @@ class SplashPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Memuat sesi…',
+                  l10n.t('auth', 'splashPage.loadingSession'),
                   style: TextStyle(
                     fontSize: 13,
                     color: scheme.onSurface.withValues(alpha: 0.65),
