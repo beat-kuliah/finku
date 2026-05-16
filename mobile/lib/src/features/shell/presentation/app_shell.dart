@@ -57,8 +57,10 @@ const _moreBranches = <ShellBranch>[
 /// Tablet breakpoint.
 const double _kRailBreakpoint = 720;
 
-/// Keep in sync with [BottomNavBar]: outer `fromLTRB` horizontal/bottom + `barHeight`.
-const double _kDockOuterMargin = 20;
+/// Keep in sync with [BottomNavBar] horizontal padding + `barHeight`.
+const double _kDockHorizontalMargin = 20;
+/// Minimum lift above the home indicator; applied via [SafeArea.minimum] only (not stacked).
+const double _kDockBottomInset = 10;
 const double _kDockBarHeight = 86;
 /// Space between dock top and FAB bottom (visual breathing room).
 const double _kFabGapAboveDock = 18;
@@ -147,6 +149,9 @@ class _AppShellState extends ConsumerState<AppShell> {
               bottom: 0,
               child: SafeArea(
                 top: false,
+                left: false,
+                right: false,
+                minimum: const EdgeInsets.only(bottom: _kDockBottomInset),
                 child: BottomNavBar(
                   activeIndex: _activeDockIndex(activeBranch),
                   items: _dockItemsFor(activeBranch),
@@ -155,10 +160,13 @@ class _AppShellState extends ConsumerState<AppShell> {
             ),
           if (!useRail)
             Positioned(
-              right: _kDockOuterMargin,
-              bottom: _kDockOuterMargin + _kDockBarHeight + _kFabGapAboveDock,
+              right: _kDockHorizontalMargin,
+              bottom: _kDockBarHeight + _kFabGapAboveDock,
               child: SafeArea(
                 top: false,
+                left: false,
+                right: false,
+                minimum: const EdgeInsets.only(bottom: _kDockBottomInset),
                 child: AddTxFab(onPressed: _openAddTxSheet),
               ),
             ),
@@ -236,11 +244,7 @@ class _ShellBody extends ConsumerWidget {
     // Clear dock + FAB: extra inset beyond `MediaQuery.padding.bottom`.
     final bottomPad = isTablet
         ? 24.0
-        : _kDockOuterMargin +
-            _kDockBarHeight +
-            _kFabGapAboveDock +
-            _kAddFabSize +
-            8;
+        : _kDockBarHeight + _kFabGapAboveDock + _kAddFabSize + 8;
 
     return Column(
       children: [
