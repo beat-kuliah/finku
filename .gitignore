@@ -1,0 +1,7 @@
+# Secrets & local env (never commit — safe for `git add .` from repo root)
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
