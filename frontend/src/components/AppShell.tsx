@@ -120,7 +120,7 @@ export default function AppShell({
   };
 
   return (
-    <div className="relative min-h-screen pb-24 md:pb-10">
+    <div className="relative min-h-screen pb-24 lg:pb-10">
       <BlobBackground />
 
       <div className="lg:grid lg:grid-cols-[260px_1fr]">
@@ -189,13 +189,13 @@ export default function AppShell({
       <button
         type="button"
         onClick={openAdd}
-        className="grid fixed bottom-28 right-5 md:bottom-8 md:right-8 w-14 h-14 rounded-full bg-gradient-neon shadow-neon place-items-center animate-pulse-glow z-50"
+        className="grid fixed bottom-28 right-5 lg:bottom-8 lg:right-8 w-14 h-14 rounded-full bg-gradient-neon shadow-neon place-items-center animate-pulse-glow z-50"
         aria-label={t("addTransaction")}
       >
         <Plus className="w-6 h-6" />
       </button>
 
-      <nav className="fixed bottom-5 inset-x-0 md:hidden z-40 px-4">
+      <nav className="fixed bottom-5 inset-x-0 lg:hidden z-40 px-4">
         <div className="mx-auto max-w-md">
           <div className="min-h-[78px] py-1 rounded-[2rem] border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_20px_40px_-18px_rgba(0,0,0,0.7)] px-1.5 flex items-stretch justify-between gap-0.5">
             <BottomNavItem

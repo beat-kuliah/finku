@@ -32,7 +32,7 @@ export default function MoreSheet() {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] md:hidden flex items-end justify-center">
+    <div className="fixed inset-0 z-[90] lg:hidden flex items-end justify-center">
       <button
         type="button"
         aria-label={tCommon("close")}
