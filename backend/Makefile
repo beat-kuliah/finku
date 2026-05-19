@@ -9,7 +9,7 @@ build:
 
 # Cross-compile for Linux AMD64 servers from Apple Silicon Mac.
 build-linux:
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/finku-server-linux-amd64 ./cmd/server
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/finku-backend ./cmd/server
 
 migrate-up:
 	migrate -path migrations -database "$${DATABASE_URL}" up

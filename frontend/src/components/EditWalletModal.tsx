@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { toast } from "sonner";
@@ -18,24 +18,36 @@ const GROUP_NONE = "";
 const GROUP_NEW = "__new__";
 
 export default function EditWalletModal({ open, wallet, groups, onClose, onSaved }: Props) {
+  if (!open || !wallet) return null;
+  return (
+    <EditWalletForm
+      key={wallet.id}
+      wallet={wallet}
+      groups={groups}
+      onClose={onClose}
+      onSaved={onSaved}
+    />
+  );
+}
+
+function EditWalletForm({
+  wallet,
+  groups,
+  onClose,
+  onSaved,
+}: {
+  wallet: walletsApi.Wallet;
+  groups: walletGroupsApi.WalletGroup[];
+  onClose: () => void;
+  onSaved?: () => void;
+}) {
   const { t } = useTranslation("wallets");
   const bump = useDataVersion((s) => s.bump);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState("");
-  const [walletType, setWalletType] = useState("cash");
-  const [groupChoice, setGroupChoice] = useState(GROUP_NONE);
+  const [name, setName] = useState(wallet.name);
+  const [walletType, setWalletType] = useState(wallet.walletType || "cash");
+  const [groupChoice, setGroupChoice] = useState(wallet.groupId ?? GROUP_NONE);
   const [newGroupName, setNewGroupName] = useState("");
-
-  useEffect(() => {
-    if (!open || !wallet) return;
-    setSaving(false);
-    setName(wallet.name);
-    setWalletType(wallet.walletType || "cash");
-    setGroupChoice(wallet.groupId ?? GROUP_NONE);
-    setNewGroupName("");
-  }, [open, wallet]);
-
-  if (!open || !wallet) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

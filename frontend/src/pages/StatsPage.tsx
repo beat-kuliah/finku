@@ -22,38 +22,39 @@ export default function StatsPage() {
   const { t, i18n } = useTranslation("stats");
   const version = useDataVersion((s) => s.version);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date());
-  const [data, setData] = useState<StatsPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const [fetchState, setFetchState] = useState<{
+    key: string;
+    data: StatsPayload | null;
+    err: string | null;
+  }>({ key: "", data: null, err: null });
 
   const { from, to } = useMemo(() => monthBounds(selectedMonth), [selectedMonth]);
   const monthTitle = formatDate(selectedMonth, { month: "long", year: "numeric" });
+  const requestKey = `${version}:${from}:${to}`;
+  const loading = fetchState.key !== requestKey;
+  const data = fetchState.key === requestKey ? fetchState.data : null;
+  const err = fetchState.key === requestKey ? fetchState.err : null;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     void (async () => {
       try {
         const d = await fetchStats(from, to);
         if (!cancelled) {
-          setData(d);
-          setErr(null);
+          setFetchState({ key: requestKey, data: d, err: null });
         }
       } catch (e) {
         if (!cancelled) {
-          setData(null);
           const msg = e instanceof Error ? e.message : t("loadFailed");
-          setErr(msg);
+          setFetchState({ key: requestKey, data: null, err: msg });
           toast.error(msg);
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [version, from, to, t]);
+  }, [requestKey, from, to, t]);
 
   const pie = useMemo(() => {
     if (!data?.categoryBreakdown?.length) return [];
@@ -68,8 +69,12 @@ export default function StatsPage() {
 
   const weekly = useMemo(() => {
     if (!data?.weeklyExpense?.length) return [];
+    const localeTag = i18n.language.startsWith("id") ? "id-ID" : "en-US";
     return data.weeklyExpense.map((w) => ({
-      label: formatDate(w.week + "T12:00:00", { day: "numeric", month: "short" }),
+      label: new Date(w.week + "T12:00:00").toLocaleDateString(localeTag, {
+        day: "numeric",
+        month: "short",
+      }),
       total: w.total,
     }));
   }, [data, i18n.language]);

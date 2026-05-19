@@ -16,6 +16,11 @@ type Props = {
 
 type RecordAs = "income" | "expense" | "modified";
 
+function defaultCategoryId(list: catApi.Category[]): string {
+  const def = list.find((c) => c.name.toLowerCase().includes("lainnya")) ?? list[0];
+  return def?.id ?? "";
+}
+
 function sanitizeBalanceInput(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -38,12 +43,32 @@ function parseBalanceInput(raw: string): number | null {
 }
 
 export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSaved }: Props) {
+  if (!open || !wallet) return null;
+  return (
+    <AdjustWalletBalanceForm
+      key={wallet.id}
+      wallet={wallet}
+      onClose={onClose}
+      onSaved={onSaved}
+    />
+  );
+}
+
+function AdjustWalletBalanceForm({
+  wallet,
+  onClose,
+  onSaved,
+}: {
+  wallet: walletsApi.Wallet;
+  onClose: () => void;
+  onSaved?: () => void;
+}) {
   const { t } = useTranslation("wallets");
   const { t: tTx } = useTranslation("transactions");
   const bump = useDataVersion((s) => s.bump);
   const [step, setStep] = useState<1 | 2>(1);
   const [saving, setSaving] = useState(false);
-  const [newBalanceRaw, setNewBalanceRaw] = useState("");
+  const [newBalanceRaw, setNewBalanceRaw] = useState(() => String(Math.round(wallet.balance)));
   const [occurredAt, setOccurredAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [recordAs, setRecordAs] = useState<RecordAs>("modified");
   const [categoryId, setCategoryId] = useState("");
@@ -51,32 +76,29 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
   const [catsExpense, setCatsExpense] = useState<catApi.Category[]>([]);
 
   useEffect(() => {
-    if (!open || !wallet) return;
-    setStep(1);
-    setSaving(false);
-    setNewBalanceRaw(String(Math.round(wallet.balance)));
-    setOccurredAt(new Date().toISOString().slice(0, 10));
-    setRecordAs("modified");
-    setCategoryId("");
+    let cancelled = false;
     void (async () => {
       try {
         const catRes = await catApi.listCategories(false);
+        if (cancelled) return;
         const income = catRes.categories.filter((c) => c.kind === "income");
         const expense = catRes.categories.filter((c) => c.kind === "expense");
         setCatsIncome(income);
         setCatsExpense(expense);
-        const defInc = income.find((c) => c.name.toLowerCase().includes("lainnya")) ?? income[0];
-        const defExp = expense.find((c) => c.name.toLowerCase().includes("lainnya")) ?? expense[0];
-        if (defInc) setCategoryId(defInc.id);
-        else if (defExp) setCategoryId(defExp.id);
+        const defInc = defaultCategoryId(income);
+        const defExp = defaultCategoryId(expense);
+        setCategoryId(defInc || defExp);
       } catch {
         /* optional */
       }
     })();
-  }, [open, wallet]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const newBalance = useMemo(() => parseBalanceInput(newBalanceRaw), [newBalanceRaw]);
-  const delta = wallet && newBalance != null ? newBalance - wallet.balance : 0;
+  const delta = newBalance != null ? newBalance - wallet.balance : 0;
 
   const allowedRecordAs = useMemo((): RecordAs[] => {
     if (delta > 0) return ["income", "modified"];
@@ -84,21 +106,19 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
     return [];
   }, [delta]);
 
-  useEffect(() => {
-    if (!open || delta === 0) return;
-    if (!allowedRecordAs.includes(recordAs)) {
-      setRecordAs(allowedRecordAs[0] ?? "modified");
+  const recordAsResolved = useMemo((): RecordAs => {
+    if (allowedRecordAs.includes(recordAs)) return recordAs;
+    return allowedRecordAs[0] ?? "modified";
+  }, [allowedRecordAs, recordAs]);
+
+  const setRecordAsWithCategory = (next: RecordAs) => {
+    setRecordAs(next);
+    if (next === "income") {
+      setCategoryId(defaultCategoryId(catsIncome));
+    } else if (next === "expense") {
+      setCategoryId(defaultCategoryId(catsExpense));
     }
-  }, [open, delta, allowedRecordAs, recordAs]);
-
-  useEffect(() => {
-    if (!open || recordAs === "modified") return;
-    const list = recordAs === "income" ? catsIncome : catsExpense;
-    const def = list.find((c) => c.name.toLowerCase().includes("lainnya")) ?? list[0];
-    if (def) setCategoryId(def.id);
-  }, [open, recordAs, catsIncome, catsExpense]);
-
-  if (!open || !wallet) return null;
+  };
 
   const handleStep1Next = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,11 +145,11 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
       onClose();
       return;
     }
-    if (!recordAs) {
+    if (!recordAsResolved) {
       toast.error(t("modal.selectRecordAs"));
       return;
     }
-    if (recordAs !== "modified" && !categoryId) {
+    if (recordAsResolved !== "modified" && !categoryId) {
       toast.error(t("modal.selectCategory"));
       return;
     }
@@ -138,9 +158,9 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
     try {
       await walletsApi.adjustWalletBalance(wallet.id, {
         newBalance,
-        recordAs,
+        recordAs: recordAsResolved,
         occurredAt,
-        ...(recordAs !== "modified" ? { categoryId } : {}),
+        ...(recordAsResolved !== "modified" ? { categoryId } : {}),
       });
       bump();
       toast.success(t("modal.adjusted"));
@@ -153,7 +173,7 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
     }
   };
 
-  const categoryOptions = recordAs === "income" ? catsIncome : catsExpense;
+  const categoryOptions = recordAsResolved === "income" ? catsIncome : catsExpense;
   const deltaLabel =
     delta > 0
       ? t("modal.deltaIncrease", { amount: formatIDR(delta) })
@@ -216,8 +236,8 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
                   <input
                     type="radio"
                     name="recordAs"
-                    checked={recordAs === "income"}
-                    onChange={() => setRecordAs("income")}
+                    checked={recordAsResolved === "income"}
+                    onChange={() => setRecordAsWithCategory("income")}
                   />
                   <span>{t("modal.recordAsIncome")}</span>
                 </label>
@@ -227,8 +247,8 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
                   <input
                     type="radio"
                     name="recordAs"
-                    checked={recordAs === "expense"}
-                    onChange={() => setRecordAs("expense")}
+                    checked={recordAsResolved === "expense"}
+                    onChange={() => setRecordAsWithCategory("expense")}
                   />
                   <span>{t("modal.recordAsExpense")}</span>
                 </label>
@@ -238,14 +258,14 @@ export default function AdjustWalletBalanceModal({ open, wallet, onClose, onSave
                   <input
                     type="radio"
                     name="recordAs"
-                    checked={recordAs === "modified"}
-                    onChange={() => setRecordAs("modified")}
+                    checked={recordAsResolved === "modified"}
+                    onChange={() => setRecordAsWithCategory("modified")}
                   />
                   <span>{t("modal.recordAsModified")}</span>
                 </label>
               )}
             </fieldset>
-            {recordAs !== "modified" && (
+            {recordAsResolved !== "modified" && (
               <CategorySelect
                 label={t("modal.category")}
                 placeholder={tTx("selectPlaceholder")}

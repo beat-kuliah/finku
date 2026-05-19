@@ -22,7 +22,7 @@ import AppShell from "@/components/AppShell";
 import { fetchDashboard, type DashboardPayload } from "@/api/summary";
 import { useAuth } from "@/store/auth";
 import { useDataVersion } from "@/store/dataVersion";
-import { formatDate, formatWeekdayShort } from "@/lib/dates";
+import { formatDate } from "@/lib/dates";
 import { formatIDR } from "@/lib/format";
 
 const COLORS = ["#00f0ff", "#2563eb", "#1d4ed8", "#38bdf8", "#7dd3fc", "#a5f3fc", "#bae6fd"];
@@ -54,8 +54,9 @@ export default function DashboardPage() {
 
   const trendData = useMemo(() => {
     if (!data?.dailyTrend?.length) return [];
+    const localeTag = i18n.language.startsWith("id") ? "id-ID" : "en-US";
     return data.dailyTrend.map((row) => ({
-      day: formatWeekdayShort(row.date + "T12:00:00"),
+      day: new Date(row.date + "T12:00:00").toLocaleDateString(localeTag, { weekday: "short" }),
       amount: row.expense,
     }));
   }, [data, i18n.language]);

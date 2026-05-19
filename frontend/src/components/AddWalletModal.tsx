@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,19 @@ const GROUP_NONE = "";
 const GROUP_NEW = "__new__";
 
 export default function AddWalletModal({ open, onClose, groups, onCreated }: Props) {
+  if (!open) return null;
+  return <AddWalletForm groups={groups} onClose={onClose} onCreated={onCreated} />;
+}
+
+function AddWalletForm({
+  groups,
+  onClose,
+  onCreated,
+}: {
+  groups: walletGroupsApi.WalletGroup[];
+  onClose: () => void;
+  onCreated?: () => void;
+}) {
   const { t } = useTranslation("wallets");
   const bump = useDataVersion((s) => s.bump);
   const [saving, setSaving] = useState(false);
@@ -24,17 +37,6 @@ export default function AddWalletModal({ open, onClose, groups, onCreated }: Pro
   const [walletType, setWalletType] = useState("cash");
   const [groupChoice, setGroupChoice] = useState(GROUP_NONE);
   const [newGroupName, setNewGroupName] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-    setSaving(false);
-    setName("");
-    setWalletType("cash");
-    setGroupChoice(GROUP_NONE);
-    setNewGroupName("");
-  }, [open]);
-
-  if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
