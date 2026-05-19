@@ -17,14 +17,5 @@
   "added": "Budget added.",
   "invalidForm": "Select a category and enter a valid limit.",
   "noBudgets": "No budgets for this period yet.",
-  "pausedArchived": " · paused (category archived)",
-  "prevMonth": "Previous month",
-  "nextMonth": "Next month",
-  "emptyMessage": "Set spending limits per expense category for this month.",
-  "noExpenseCategories": "No expense categories.",
-  "deleteTitle": "Delete budget?",
-  "deleteBody": "The limit for this category will be removed.",
-  "deleted": "Budget deleted.",
-  "paused": " · paused",
-  "categoryFallback": "Category"
+  "pausedArchived": " · paused (category archived)"
 }

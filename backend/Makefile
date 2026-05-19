@@ -1,7 +1,15 @@
-.PHONY: run migrate-up migrate-down migrate-create sqlc-gen tools
+.PHONY: run build build-linux migrate-up migrate-down migrate-create sqlc-gen tools
 
 run:
 	go run ./cmd/server
+
+# Native build for current OS/arch (e.g. darwin/arm64 on Apple Silicon).
+build:
+	go build -ldflags="-s -w" -o bin/finku-server ./cmd/server
+
+# Cross-compile for Linux AMD64 servers from Apple Silicon Mac.
+build-linux:
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/finku-server-linux-amd64 ./cmd/server
 
 migrate-up:
 	migrate -path migrations -database "$${DATABASE_URL}" up

@@ -64,6 +64,7 @@ abstract class DashboardPayloadDto with _$DashboardPayloadDto {
     required int totalBalance,
     required int periodIncome,
     required int periodExpense,
+    int? periodModifiedBalance,
     required String periodFrom,
     required String periodTo,
     required List<DailyTrendPointDto> dailyTrend,
@@ -104,6 +105,7 @@ abstract class StatsPayloadDto with _$StatsPayloadDto {
     required String periodTo,
     required int totalIncome,
     required int totalExpense,
+    int? totalModifiedBalance,
     required List<StatsCategoryBreakdownDto> categoryBreakdown,
     required List<WeeklyExpenseDto> weeklyExpense,
   }) = _StatsPayloadDto;

@@ -14,5 +14,12 @@
   "moreAriaActive": "{{label}}, open more menu",
   "moreAria": "More",
   "notificationsToast": "Notifications: push not available yet — settings are in Profile.",
-  "moreSheetTitle": "More"
+  "moreSheetTitle": "More",
+  "dashboardSubheader": "Financial overview",
+  "transactionsSubheader": "Income & expense records",
+  "walletsSubheader": "Wallets & accounts",
+  "budgetSubheader": "Spending limits",
+  "statsSubheader": "Spending insights",
+  "goalsSubheader": "Savings targets",
+  "profileSubheader": "Account settings"
 }

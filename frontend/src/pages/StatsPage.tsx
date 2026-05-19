@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, Tooltip } from "recharts";
+import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { fetchStats, type StatsPayload } from "@/api/summary";
 import { useDataVersion } from "@/store/dataVersion";
@@ -9,25 +11,49 @@ import { formatIDR } from "@/lib/format";
 
 const COLORS = ["#00f0ff", "#2563eb", "#1d4ed8", "#38bdf8", "#7dd3fc", "#a5f3fc"];
 
+function monthBounds(month: Date) {
+  const from = new Date(month.getFullYear(), month.getMonth(), 1);
+  const to = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: iso(from), to: iso(to) };
+}
+
 export default function StatsPage() {
   const { t, i18n } = useTranslation("stats");
   const version = useDataVersion((s) => s.version);
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
   const [data, setData] = useState<StatsPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  const { from, to } = useMemo(() => monthBounds(selectedMonth), [selectedMonth]);
+  const monthTitle = formatDate(selectedMonth, { month: "long", year: "numeric" });
 
   useEffect(() => {
-    let c = false;
+    let cancelled = false;
+    setLoading(true);
     void (async () => {
       try {
-        const d = await fetchStats();
-        if (!c) setData(d);
-      } catch {
-        if (!c) setData(null);
+        const d = await fetchStats(from, to);
+        if (!cancelled) {
+          setData(d);
+          setErr(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setData(null);
+          const msg = e instanceof Error ? e.message : t("loadFailed");
+          setErr(msg);
+          toast.error(msg);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
-      c = true;
+      cancelled = true;
     };
-  }, [version]);
+  }, [version, from, to, t]);
 
   const pie = useMemo(() => {
     if (!data?.categoryBreakdown?.length) return [];
@@ -48,8 +74,38 @@ export default function StatsPage() {
     }));
   }, [data, i18n.language]);
 
+  const shiftMonth = (delta: number) => {
+    setSelectedMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+  };
+
   return (
     <AppShell activeSection="stats" desktopTitle={t("title")} desktopSubtitle={t("subtitle")}>
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <button
+          type="button"
+          className="btn-ghost !p-2 rounded-xl"
+          aria-label={t("prevMonth")}
+          onClick={() => shiftMonth(-1)}
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <h2 className="font-display font-bold text-lg min-w-[10rem] text-center">{monthTitle}</h2>
+        <button
+          type="button"
+          className="btn-ghost !p-2 rounded-xl"
+          aria-label={t("nextMonth")}
+          onClick={() => shiftMonth(1)}
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {err && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 mb-4">
+          {err}
+        </div>
+      )}
+
       <section className="card !p-6">
         <p className="text-xs text-white/50 mb-2">
           {data?.periodFrom && data?.periodTo
@@ -59,16 +115,24 @@ export default function StatsPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs text-white/60">{t("totalIncome")}</p>
-            <p className="font-display text-2xl font-bold mt-1">{data ? formatIDR(data.totalIncome) : "—"}</p>
+            <p className="font-display text-2xl font-bold mt-1">
+              {loading ? "…" : data ? formatIDR(data.totalIncome) : "—"}
+            </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs text-white/60">{t("totalExpense")}</p>
-            <p className="font-display text-2xl font-bold mt-1">{data ? formatIDR(data.totalExpense) : "—"}</p>
+            <p className="font-display text-2xl font-bold mt-1">
+              {loading ? "…" : data ? formatIDR(data.totalExpense) : "—"}
+            </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2 lg:col-span-1">
             <p className="text-xs text-white/60">{t("totalModifiedBalance")}</p>
             <p className="font-display text-2xl font-bold mt-1">
-              {data?.totalModifiedBalance != null ? formatIDR(data.totalModifiedBalance) : "—"}
+              {loading
+                ? "…"
+                : data?.totalModifiedBalance != null
+                  ? formatIDR(data.totalModifiedBalance)
+                  : "—"}
             </p>
             <p className="text-xs text-white/45 mt-2">{t("modifiedHint")}</p>
           </div>
@@ -79,7 +143,9 @@ export default function StatsPage() {
         <div className="card !p-6">
           <h2 className="font-display font-bold text-xl mb-4">{t("byCategory")}</h2>
           <div className="h-56">
-            {pie.length > 0 ? (
+            {loading ? (
+              <p className="text-white/50 text-sm h-full flex items-center justify-center">…</p>
+            ) : pie.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={pie} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
@@ -98,13 +164,19 @@ export default function StatsPage() {
         <div className="card !p-6">
           <h2 className="font-display font-bold text-xl mb-4">{t("weeklyExpense")}</h2>
           <div className="h-56">
-            {weekly.length > 0 ? (
+            {loading ? (
+              <p className="text-white/50 text-sm h-full flex items-center justify-center">…</p>
+            ) : weekly.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weekly}>
                   <XAxis dataKey="label" stroke="#9fb5da" axisLine={false} tickLine={false} />
                   <Tooltip
                     formatter={(v: number) => [formatIDR(v), t("expense")]}
-                    contentStyle={{ borderRadius: 12, background: "rgba(11,18,32,0.95)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    contentStyle={{
+                      borderRadius: 12,
+                      background: "rgba(11,18,32,0.95)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
                   />
                   <Bar dataKey="total" fill="#00f0ff" radius={[8, 8, 0, 0]} />
                 </BarChart>

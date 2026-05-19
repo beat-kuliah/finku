@@ -219,9 +219,9 @@ Bagian ini membedakan **visi produk** di atas dengan **kode yang sudah jalan**.
 | Area | Status |
 |------|--------|
 | Login, register, refresh, `me`, username, password, identities, OAuth Google, logout | **Terhubung ke API** ([frontend/src/store/auth.ts](frontend/src/store/auth.ts), [backend/cmd/server/main.go](backend/cmd/server/main.go)) |
-| Dashboard, Transactions, Budget, Stats, Goals | **Data mock** di masing-masing page (hardcoded) |
-| Wallet / kategori / budget / goals / transaksi sebagai domain backend | **Belum** ada tabel & route selain auth |
-| Tombol tambah transaksi (`+`) di AppShell | **Placeholder** (toast / tanpa handler) |
+| Dashboard, Transactions, Budget, Stats, Goals (web + mobile) | **Terhubung ke API** (`/api/summary/*`, CRUD domain) |
+| Wallet / kategori / budget / goals / transaksi (backend) | **Tersedia** — migration & route domain finansial aktif |
+| Tombol tambah transaksi (`+`) di AppShell | **Terhubung** — modal tambah transaksi |
 | Preferensi finansial penuh di profil | Sebagian **UI only**; field seperti `monthly_income` / `payday` di DB user belum punya flow edit penuh |
 
 ### Flow auth (implementasi nyata)
@@ -248,18 +248,15 @@ sequenceDiagram
   API-->>Store: accessToken + user
 ```
 
-### Sumber mock di frontend (untuk development UI)
+### Ringkasan & analitik (API live)
 
-- [frontend/src/pages/DashboardPage.tsx](frontend/src/pages/DashboardPage.tsx) — `trendData`, `categoryData`, `budgets`, `latestTx`
-- [frontend/src/pages/TransactionsPage.tsx](frontend/src/pages/TransactionsPage.tsx) — array `transactions`
-- [frontend/src/pages/BudgetPage.tsx](frontend/src/pages/BudgetPage.tsx) — `budgetItems`
-- [frontend/src/pages/StatsPage.tsx](frontend/src/pages/StatsPage.tsx) — `categoryData`, `weeklyData`
-- [frontend/src/pages/GoalsPage.tsx](frontend/src/pages/GoalsPage.tsx) — `goals`
+- Web: [DashboardPage.tsx](frontend/src/pages/DashboardPage.tsx), [StatsPage.tsx](frontend/src/pages/StatsPage.tsx) memanggil `fetchDashboard` / `fetchStats` dengan filter periode.
+- Mobile: [dashboard_page.dart](mobile/lib/src/features/dashboard/presentation/dashboard_page.dart), [stats_page.dart](mobile/lib/src/features/stats/presentation/stats_page.dart) memakai provider yang memanggil API summary yang sama.
 
 ### Status backend (schema & route)
 
-- Migration yang ada: [backend/migrations/000001_create_users.up.sql](backend/migrations/000001_create_users.up.sql), [backend/migrations/000002_username_and_identities.up.sql](backend/migrations/000002_username_and_identities.up.sql) (`users`, `user_identities`).
-- Route aktif selain health: `/api/auth/*` di [backend/cmd/server/main.go](backend/cmd/server/main.go).
+- Migration domain finansial (wallets, categories, transactions, budgets, goals, dll.) ada di [backend/migrations/](backend/migrations/).
+- Route aktif: `/api/auth/*`, `/api/summary/*`, serta CRUD wallets, categories, transactions, budgets, goals — lihat [backend/cmd/server/main.go](backend/cmd/server/main.go).
 
 ---
 

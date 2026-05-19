@@ -14,6 +14,10 @@ import 'package:finku_mobile/src/core/presentation/money_text.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
 import 'package:finku_mobile/src/features/dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:finku_mobile/src/features/dashboard/presentation/widgets/dashboard_budget_strip.dart';
+import 'package:finku_mobile/src/features/dashboard/presentation/widgets/dashboard_category_section.dart';
+import 'package:finku_mobile/src/features/dashboard/presentation/widgets/dashboard_insight_card.dart';
+import 'package:finku_mobile/src/features/dashboard/presentation/widgets/dashboard_modified_stat.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/glass_card.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/placeholder_section.dart';
 import 'package:finku_mobile/src/features/summary/data/dto/summary_dto.dart';
@@ -53,7 +57,13 @@ class DashboardPage extends ConsumerWidget {
           const SizedBox(height: 16),
           _PeriodCard(data: d, l10n: l10n, locale: locale),
           const SizedBox(height: 16),
+          DashboardCategorySection(items: d.categoryBreakdown, l10n: l10n),
+          const SizedBox(height: 16),
+          DashboardBudgetStrip(budgets: d.budgets, l10n: l10n),
+          const SizedBox(height: 16),
           _LatestSection(latest: d.latestTransactions, l10n: l10n),
+          const SizedBox(height: 16),
+          DashboardInsightCard(l10n: l10n),
         ],
       ),
       loading: () => BranchScaffold(
@@ -124,6 +134,24 @@ class _SummaryStrip extends StatelessWidget {
                   label: l10n.t('dashboard', 'expensePeriod'),
                   amount: data.periodExpense,
                   positive: false,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: DashboardModifiedStat(
+                  amount: data.periodModifiedBalance,
+                  l10n: l10n,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DashboardBudgetRemainingStat(
+                  remaining: dashboardBudgetRemaining(data.budgets),
+                  l10n: l10n,
                 ),
               ),
             ],

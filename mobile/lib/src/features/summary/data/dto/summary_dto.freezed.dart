@@ -1115,7 +1115,7 @@ as String,
 /// @nodoc
 mixin _$DashboardPayloadDto {
 
- int get totalBalance; int get periodIncome; int get periodExpense; String get periodFrom; String get periodTo; List<DailyTrendPointDto> get dailyTrend; List<CategoryBreakdownItemDto> get categoryBreakdown; List<DashboardBudgetItemDto> get budgets; List<LatestTransactionItemDto> get latestTransactions;
+ int get totalBalance; int get periodIncome; int get periodExpense; int? get periodModifiedBalance; String get periodFrom; String get periodTo; List<DailyTrendPointDto> get dailyTrend; List<CategoryBreakdownItemDto> get categoryBreakdown; List<DashboardBudgetItemDto> get budgets; List<LatestTransactionItemDto> get latestTransactions;
 /// Create a copy of DashboardPayloadDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1128,16 +1128,16 @@ $DashboardPayloadDtoCopyWith<DashboardPayloadDto> get copyWith => _$DashboardPay
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DashboardPayloadDto&&(identical(other.totalBalance, totalBalance) || other.totalBalance == totalBalance)&&(identical(other.periodIncome, periodIncome) || other.periodIncome == periodIncome)&&(identical(other.periodExpense, periodExpense) || other.periodExpense == periodExpense)&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&const DeepCollectionEquality().equals(other.dailyTrend, dailyTrend)&&const DeepCollectionEquality().equals(other.categoryBreakdown, categoryBreakdown)&&const DeepCollectionEquality().equals(other.budgets, budgets)&&const DeepCollectionEquality().equals(other.latestTransactions, latestTransactions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DashboardPayloadDto&&(identical(other.totalBalance, totalBalance) || other.totalBalance == totalBalance)&&(identical(other.periodIncome, periodIncome) || other.periodIncome == periodIncome)&&(identical(other.periodExpense, periodExpense) || other.periodExpense == periodExpense)&&(identical(other.periodModifiedBalance, periodModifiedBalance) || other.periodModifiedBalance == periodModifiedBalance)&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&const DeepCollectionEquality().equals(other.dailyTrend, dailyTrend)&&const DeepCollectionEquality().equals(other.categoryBreakdown, categoryBreakdown)&&const DeepCollectionEquality().equals(other.budgets, budgets)&&const DeepCollectionEquality().equals(other.latestTransactions, latestTransactions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,totalBalance,periodIncome,periodExpense,periodFrom,periodTo,const DeepCollectionEquality().hash(dailyTrend),const DeepCollectionEquality().hash(categoryBreakdown),const DeepCollectionEquality().hash(budgets),const DeepCollectionEquality().hash(latestTransactions));
+int get hashCode => Object.hash(runtimeType,totalBalance,periodIncome,periodExpense,periodModifiedBalance,periodFrom,periodTo,const DeepCollectionEquality().hash(dailyTrend),const DeepCollectionEquality().hash(categoryBreakdown),const DeepCollectionEquality().hash(budgets),const DeepCollectionEquality().hash(latestTransactions));
 
 @override
 String toString() {
-  return 'DashboardPayloadDto(totalBalance: $totalBalance, periodIncome: $periodIncome, periodExpense: $periodExpense, periodFrom: $periodFrom, periodTo: $periodTo, dailyTrend: $dailyTrend, categoryBreakdown: $categoryBreakdown, budgets: $budgets, latestTransactions: $latestTransactions)';
+  return 'DashboardPayloadDto(totalBalance: $totalBalance, periodIncome: $periodIncome, periodExpense: $periodExpense, periodModifiedBalance: $periodModifiedBalance, periodFrom: $periodFrom, periodTo: $periodTo, dailyTrend: $dailyTrend, categoryBreakdown: $categoryBreakdown, budgets: $budgets, latestTransactions: $latestTransactions)';
 }
 
 
@@ -1148,7 +1148,7 @@ abstract mixin class $DashboardPayloadDtoCopyWith<$Res>  {
   factory $DashboardPayloadDtoCopyWith(DashboardPayloadDto value, $Res Function(DashboardPayloadDto) _then) = _$DashboardPayloadDtoCopyWithImpl;
 @useResult
 $Res call({
- int totalBalance, int periodIncome, int periodExpense, String periodFrom, String periodTo, List<DailyTrendPointDto> dailyTrend, List<CategoryBreakdownItemDto> categoryBreakdown, List<DashboardBudgetItemDto> budgets, List<LatestTransactionItemDto> latestTransactions
+ int totalBalance, int periodIncome, int periodExpense, int? periodModifiedBalance, String periodFrom, String periodTo, List<DailyTrendPointDto> dailyTrend, List<CategoryBreakdownItemDto> categoryBreakdown, List<DashboardBudgetItemDto> budgets, List<LatestTransactionItemDto> latestTransactions
 });
 
 
@@ -1165,12 +1165,13 @@ class _$DashboardPayloadDtoCopyWithImpl<$Res>
 
 /// Create a copy of DashboardPayloadDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? totalBalance = null,Object? periodIncome = null,Object? periodExpense = null,Object? periodFrom = null,Object? periodTo = null,Object? dailyTrend = null,Object? categoryBreakdown = null,Object? budgets = null,Object? latestTransactions = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? totalBalance = null,Object? periodIncome = null,Object? periodExpense = null,Object? periodModifiedBalance = freezed,Object? periodFrom = null,Object? periodTo = null,Object? dailyTrend = null,Object? categoryBreakdown = null,Object? budgets = null,Object? latestTransactions = null,}) {
   return _then(_self.copyWith(
 totalBalance: null == totalBalance ? _self.totalBalance : totalBalance // ignore: cast_nullable_to_non_nullable
 as int,periodIncome: null == periodIncome ? _self.periodIncome : periodIncome // ignore: cast_nullable_to_non_nullable
 as int,periodExpense: null == periodExpense ? _self.periodExpense : periodExpense // ignore: cast_nullable_to_non_nullable
-as int,periodFrom: null == periodFrom ? _self.periodFrom : periodFrom // ignore: cast_nullable_to_non_nullable
+as int,periodModifiedBalance: freezed == periodModifiedBalance ? _self.periodModifiedBalance : periodModifiedBalance // ignore: cast_nullable_to_non_nullable
+as int?,periodFrom: null == periodFrom ? _self.periodFrom : periodFrom // ignore: cast_nullable_to_non_nullable
 as String,periodTo: null == periodTo ? _self.periodTo : periodTo // ignore: cast_nullable_to_non_nullable
 as String,dailyTrend: null == dailyTrend ? _self.dailyTrend : dailyTrend // ignore: cast_nullable_to_non_nullable
 as List<DailyTrendPointDto>,categoryBreakdown: null == categoryBreakdown ? _self.categoryBreakdown : categoryBreakdown // ignore: cast_nullable_to_non_nullable
@@ -1261,10 +1262,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int totalBalance,  int periodIncome,  int periodExpense,  String periodFrom,  String periodTo,  List<DailyTrendPointDto> dailyTrend,  List<CategoryBreakdownItemDto> categoryBreakdown,  List<DashboardBudgetItemDto> budgets,  List<LatestTransactionItemDto> latestTransactions)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int totalBalance,  int periodIncome,  int periodExpense,  int? periodModifiedBalance,  String periodFrom,  String periodTo,  List<DailyTrendPointDto> dailyTrend,  List<CategoryBreakdownItemDto> categoryBreakdown,  List<DashboardBudgetItemDto> budgets,  List<LatestTransactionItemDto> latestTransactions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DashboardPayloadDto() when $default != null:
-return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.periodFrom,_that.periodTo,_that.dailyTrend,_that.categoryBreakdown,_that.budgets,_that.latestTransactions);case _:
+return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.periodModifiedBalance,_that.periodFrom,_that.periodTo,_that.dailyTrend,_that.categoryBreakdown,_that.budgets,_that.latestTransactions);case _:
   return orElse();
 
 }
@@ -1282,10 +1283,10 @@ return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int totalBalance,  int periodIncome,  int periodExpense,  String periodFrom,  String periodTo,  List<DailyTrendPointDto> dailyTrend,  List<CategoryBreakdownItemDto> categoryBreakdown,  List<DashboardBudgetItemDto> budgets,  List<LatestTransactionItemDto> latestTransactions)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int totalBalance,  int periodIncome,  int periodExpense,  int? periodModifiedBalance,  String periodFrom,  String periodTo,  List<DailyTrendPointDto> dailyTrend,  List<CategoryBreakdownItemDto> categoryBreakdown,  List<DashboardBudgetItemDto> budgets,  List<LatestTransactionItemDto> latestTransactions)  $default,) {final _that = this;
 switch (_that) {
 case _DashboardPayloadDto():
-return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.periodFrom,_that.periodTo,_that.dailyTrend,_that.categoryBreakdown,_that.budgets,_that.latestTransactions);case _:
+return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.periodModifiedBalance,_that.periodFrom,_that.periodTo,_that.dailyTrend,_that.categoryBreakdown,_that.budgets,_that.latestTransactions);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1302,10 +1303,10 @@ return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int totalBalance,  int periodIncome,  int periodExpense,  String periodFrom,  String periodTo,  List<DailyTrendPointDto> dailyTrend,  List<CategoryBreakdownItemDto> categoryBreakdown,  List<DashboardBudgetItemDto> budgets,  List<LatestTransactionItemDto> latestTransactions)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int totalBalance,  int periodIncome,  int periodExpense,  int? periodModifiedBalance,  String periodFrom,  String periodTo,  List<DailyTrendPointDto> dailyTrend,  List<CategoryBreakdownItemDto> categoryBreakdown,  List<DashboardBudgetItemDto> budgets,  List<LatestTransactionItemDto> latestTransactions)?  $default,) {final _that = this;
 switch (_that) {
 case _DashboardPayloadDto() when $default != null:
-return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.periodFrom,_that.periodTo,_that.dailyTrend,_that.categoryBreakdown,_that.budgets,_that.latestTransactions);case _:
+return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.periodModifiedBalance,_that.periodFrom,_that.periodTo,_that.dailyTrend,_that.categoryBreakdown,_that.budgets,_that.latestTransactions);case _:
   return null;
 
 }
@@ -1317,12 +1318,13 @@ return $default(_that.totalBalance,_that.periodIncome,_that.periodExpense,_that.
 @JsonSerializable()
 
 class _DashboardPayloadDto implements DashboardPayloadDto {
-  const _DashboardPayloadDto({required this.totalBalance, required this.periodIncome, required this.periodExpense, required this.periodFrom, required this.periodTo, required final  List<DailyTrendPointDto> dailyTrend, required final  List<CategoryBreakdownItemDto> categoryBreakdown, required final  List<DashboardBudgetItemDto> budgets, required final  List<LatestTransactionItemDto> latestTransactions}): _dailyTrend = dailyTrend,_categoryBreakdown = categoryBreakdown,_budgets = budgets,_latestTransactions = latestTransactions;
+  const _DashboardPayloadDto({required this.totalBalance, required this.periodIncome, required this.periodExpense, this.periodModifiedBalance, required this.periodFrom, required this.periodTo, required final  List<DailyTrendPointDto> dailyTrend, required final  List<CategoryBreakdownItemDto> categoryBreakdown, required final  List<DashboardBudgetItemDto> budgets, required final  List<LatestTransactionItemDto> latestTransactions}): _dailyTrend = dailyTrend,_categoryBreakdown = categoryBreakdown,_budgets = budgets,_latestTransactions = latestTransactions;
   factory _DashboardPayloadDto.fromJson(Map<String, dynamic> json) => _$DashboardPayloadDtoFromJson(json);
 
 @override final  int totalBalance;
 @override final  int periodIncome;
 @override final  int periodExpense;
+@override final  int? periodModifiedBalance;
 @override final  String periodFrom;
 @override final  String periodTo;
  final  List<DailyTrendPointDto> _dailyTrend;
@@ -1367,16 +1369,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DashboardPayloadDto&&(identical(other.totalBalance, totalBalance) || other.totalBalance == totalBalance)&&(identical(other.periodIncome, periodIncome) || other.periodIncome == periodIncome)&&(identical(other.periodExpense, periodExpense) || other.periodExpense == periodExpense)&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&const DeepCollectionEquality().equals(other._dailyTrend, _dailyTrend)&&const DeepCollectionEquality().equals(other._categoryBreakdown, _categoryBreakdown)&&const DeepCollectionEquality().equals(other._budgets, _budgets)&&const DeepCollectionEquality().equals(other._latestTransactions, _latestTransactions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DashboardPayloadDto&&(identical(other.totalBalance, totalBalance) || other.totalBalance == totalBalance)&&(identical(other.periodIncome, periodIncome) || other.periodIncome == periodIncome)&&(identical(other.periodExpense, periodExpense) || other.periodExpense == periodExpense)&&(identical(other.periodModifiedBalance, periodModifiedBalance) || other.periodModifiedBalance == periodModifiedBalance)&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&const DeepCollectionEquality().equals(other._dailyTrend, _dailyTrend)&&const DeepCollectionEquality().equals(other._categoryBreakdown, _categoryBreakdown)&&const DeepCollectionEquality().equals(other._budgets, _budgets)&&const DeepCollectionEquality().equals(other._latestTransactions, _latestTransactions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,totalBalance,periodIncome,periodExpense,periodFrom,periodTo,const DeepCollectionEquality().hash(_dailyTrend),const DeepCollectionEquality().hash(_categoryBreakdown),const DeepCollectionEquality().hash(_budgets),const DeepCollectionEquality().hash(_latestTransactions));
+int get hashCode => Object.hash(runtimeType,totalBalance,periodIncome,periodExpense,periodModifiedBalance,periodFrom,periodTo,const DeepCollectionEquality().hash(_dailyTrend),const DeepCollectionEquality().hash(_categoryBreakdown),const DeepCollectionEquality().hash(_budgets),const DeepCollectionEquality().hash(_latestTransactions));
 
 @override
 String toString() {
-  return 'DashboardPayloadDto(totalBalance: $totalBalance, periodIncome: $periodIncome, periodExpense: $periodExpense, periodFrom: $periodFrom, periodTo: $periodTo, dailyTrend: $dailyTrend, categoryBreakdown: $categoryBreakdown, budgets: $budgets, latestTransactions: $latestTransactions)';
+  return 'DashboardPayloadDto(totalBalance: $totalBalance, periodIncome: $periodIncome, periodExpense: $periodExpense, periodModifiedBalance: $periodModifiedBalance, periodFrom: $periodFrom, periodTo: $periodTo, dailyTrend: $dailyTrend, categoryBreakdown: $categoryBreakdown, budgets: $budgets, latestTransactions: $latestTransactions)';
 }
 
 
@@ -1387,7 +1389,7 @@ abstract mixin class _$DashboardPayloadDtoCopyWith<$Res> implements $DashboardPa
   factory _$DashboardPayloadDtoCopyWith(_DashboardPayloadDto value, $Res Function(_DashboardPayloadDto) _then) = __$DashboardPayloadDtoCopyWithImpl;
 @override @useResult
 $Res call({
- int totalBalance, int periodIncome, int periodExpense, String periodFrom, String periodTo, List<DailyTrendPointDto> dailyTrend, List<CategoryBreakdownItemDto> categoryBreakdown, List<DashboardBudgetItemDto> budgets, List<LatestTransactionItemDto> latestTransactions
+ int totalBalance, int periodIncome, int periodExpense, int? periodModifiedBalance, String periodFrom, String periodTo, List<DailyTrendPointDto> dailyTrend, List<CategoryBreakdownItemDto> categoryBreakdown, List<DashboardBudgetItemDto> budgets, List<LatestTransactionItemDto> latestTransactions
 });
 
 
@@ -1404,12 +1406,13 @@ class __$DashboardPayloadDtoCopyWithImpl<$Res>
 
 /// Create a copy of DashboardPayloadDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? totalBalance = null,Object? periodIncome = null,Object? periodExpense = null,Object? periodFrom = null,Object? periodTo = null,Object? dailyTrend = null,Object? categoryBreakdown = null,Object? budgets = null,Object? latestTransactions = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? totalBalance = null,Object? periodIncome = null,Object? periodExpense = null,Object? periodModifiedBalance = freezed,Object? periodFrom = null,Object? periodTo = null,Object? dailyTrend = null,Object? categoryBreakdown = null,Object? budgets = null,Object? latestTransactions = null,}) {
   return _then(_DashboardPayloadDto(
 totalBalance: null == totalBalance ? _self.totalBalance : totalBalance // ignore: cast_nullable_to_non_nullable
 as int,periodIncome: null == periodIncome ? _self.periodIncome : periodIncome // ignore: cast_nullable_to_non_nullable
 as int,periodExpense: null == periodExpense ? _self.periodExpense : periodExpense // ignore: cast_nullable_to_non_nullable
-as int,periodFrom: null == periodFrom ? _self.periodFrom : periodFrom // ignore: cast_nullable_to_non_nullable
+as int,periodModifiedBalance: freezed == periodModifiedBalance ? _self.periodModifiedBalance : periodModifiedBalance // ignore: cast_nullable_to_non_nullable
+as int?,periodFrom: null == periodFrom ? _self.periodFrom : periodFrom // ignore: cast_nullable_to_non_nullable
 as String,periodTo: null == periodTo ? _self.periodTo : periodTo // ignore: cast_nullable_to_non_nullable
 as String,dailyTrend: null == dailyTrend ? _self._dailyTrend : dailyTrend // ignore: cast_nullable_to_non_nullable
 as List<DailyTrendPointDto>,categoryBreakdown: null == categoryBreakdown ? _self._categoryBreakdown : categoryBreakdown // ignore: cast_nullable_to_non_nullable
@@ -1961,7 +1964,7 @@ as int,
 /// @nodoc
 mixin _$StatsPayloadDto {
 
- String get periodFrom; String get periodTo; int get totalIncome; int get totalExpense; List<StatsCategoryBreakdownDto> get categoryBreakdown; List<WeeklyExpenseDto> get weeklyExpense;
+ String get periodFrom; String get periodTo; int get totalIncome; int get totalExpense; int? get totalModifiedBalance; List<StatsCategoryBreakdownDto> get categoryBreakdown; List<WeeklyExpenseDto> get weeklyExpense;
 /// Create a copy of StatsPayloadDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1974,16 +1977,16 @@ $StatsPayloadDtoCopyWith<StatsPayloadDto> get copyWith => _$StatsPayloadDtoCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is StatsPayloadDto&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&(identical(other.totalIncome, totalIncome) || other.totalIncome == totalIncome)&&(identical(other.totalExpense, totalExpense) || other.totalExpense == totalExpense)&&const DeepCollectionEquality().equals(other.categoryBreakdown, categoryBreakdown)&&const DeepCollectionEquality().equals(other.weeklyExpense, weeklyExpense));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StatsPayloadDto&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&(identical(other.totalIncome, totalIncome) || other.totalIncome == totalIncome)&&(identical(other.totalExpense, totalExpense) || other.totalExpense == totalExpense)&&(identical(other.totalModifiedBalance, totalModifiedBalance) || other.totalModifiedBalance == totalModifiedBalance)&&const DeepCollectionEquality().equals(other.categoryBreakdown, categoryBreakdown)&&const DeepCollectionEquality().equals(other.weeklyExpense, weeklyExpense));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,periodFrom,periodTo,totalIncome,totalExpense,const DeepCollectionEquality().hash(categoryBreakdown),const DeepCollectionEquality().hash(weeklyExpense));
+int get hashCode => Object.hash(runtimeType,periodFrom,periodTo,totalIncome,totalExpense,totalModifiedBalance,const DeepCollectionEquality().hash(categoryBreakdown),const DeepCollectionEquality().hash(weeklyExpense));
 
 @override
 String toString() {
-  return 'StatsPayloadDto(periodFrom: $periodFrom, periodTo: $periodTo, totalIncome: $totalIncome, totalExpense: $totalExpense, categoryBreakdown: $categoryBreakdown, weeklyExpense: $weeklyExpense)';
+  return 'StatsPayloadDto(periodFrom: $periodFrom, periodTo: $periodTo, totalIncome: $totalIncome, totalExpense: $totalExpense, totalModifiedBalance: $totalModifiedBalance, categoryBreakdown: $categoryBreakdown, weeklyExpense: $weeklyExpense)';
 }
 
 
@@ -1994,7 +1997,7 @@ abstract mixin class $StatsPayloadDtoCopyWith<$Res>  {
   factory $StatsPayloadDtoCopyWith(StatsPayloadDto value, $Res Function(StatsPayloadDto) _then) = _$StatsPayloadDtoCopyWithImpl;
 @useResult
 $Res call({
- String periodFrom, String periodTo, int totalIncome, int totalExpense, List<StatsCategoryBreakdownDto> categoryBreakdown, List<WeeklyExpenseDto> weeklyExpense
+ String periodFrom, String periodTo, int totalIncome, int totalExpense, int? totalModifiedBalance, List<StatsCategoryBreakdownDto> categoryBreakdown, List<WeeklyExpenseDto> weeklyExpense
 });
 
 
@@ -2011,13 +2014,14 @@ class _$StatsPayloadDtoCopyWithImpl<$Res>
 
 /// Create a copy of StatsPayloadDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? periodFrom = null,Object? periodTo = null,Object? totalIncome = null,Object? totalExpense = null,Object? categoryBreakdown = null,Object? weeklyExpense = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? periodFrom = null,Object? periodTo = null,Object? totalIncome = null,Object? totalExpense = null,Object? totalModifiedBalance = freezed,Object? categoryBreakdown = null,Object? weeklyExpense = null,}) {
   return _then(_self.copyWith(
 periodFrom: null == periodFrom ? _self.periodFrom : periodFrom // ignore: cast_nullable_to_non_nullable
 as String,periodTo: null == periodTo ? _self.periodTo : periodTo // ignore: cast_nullable_to_non_nullable
 as String,totalIncome: null == totalIncome ? _self.totalIncome : totalIncome // ignore: cast_nullable_to_non_nullable
 as int,totalExpense: null == totalExpense ? _self.totalExpense : totalExpense // ignore: cast_nullable_to_non_nullable
-as int,categoryBreakdown: null == categoryBreakdown ? _self.categoryBreakdown : categoryBreakdown // ignore: cast_nullable_to_non_nullable
+as int,totalModifiedBalance: freezed == totalModifiedBalance ? _self.totalModifiedBalance : totalModifiedBalance // ignore: cast_nullable_to_non_nullable
+as int?,categoryBreakdown: null == categoryBreakdown ? _self.categoryBreakdown : categoryBreakdown // ignore: cast_nullable_to_non_nullable
 as List<StatsCategoryBreakdownDto>,weeklyExpense: null == weeklyExpense ? _self.weeklyExpense : weeklyExpense // ignore: cast_nullable_to_non_nullable
 as List<WeeklyExpenseDto>,
   ));
@@ -2104,10 +2108,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String periodFrom,  String periodTo,  int totalIncome,  int totalExpense,  List<StatsCategoryBreakdownDto> categoryBreakdown,  List<WeeklyExpenseDto> weeklyExpense)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String periodFrom,  String periodTo,  int totalIncome,  int totalExpense,  int? totalModifiedBalance,  List<StatsCategoryBreakdownDto> categoryBreakdown,  List<WeeklyExpenseDto> weeklyExpense)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _StatsPayloadDto() when $default != null:
-return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExpense,_that.categoryBreakdown,_that.weeklyExpense);case _:
+return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExpense,_that.totalModifiedBalance,_that.categoryBreakdown,_that.weeklyExpense);case _:
   return orElse();
 
 }
@@ -2125,10 +2129,10 @@ return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExp
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String periodFrom,  String periodTo,  int totalIncome,  int totalExpense,  List<StatsCategoryBreakdownDto> categoryBreakdown,  List<WeeklyExpenseDto> weeklyExpense)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String periodFrom,  String periodTo,  int totalIncome,  int totalExpense,  int? totalModifiedBalance,  List<StatsCategoryBreakdownDto> categoryBreakdown,  List<WeeklyExpenseDto> weeklyExpense)  $default,) {final _that = this;
 switch (_that) {
 case _StatsPayloadDto():
-return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExpense,_that.categoryBreakdown,_that.weeklyExpense);case _:
+return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExpense,_that.totalModifiedBalance,_that.categoryBreakdown,_that.weeklyExpense);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2145,10 +2149,10 @@ return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExp
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String periodFrom,  String periodTo,  int totalIncome,  int totalExpense,  List<StatsCategoryBreakdownDto> categoryBreakdown,  List<WeeklyExpenseDto> weeklyExpense)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String periodFrom,  String periodTo,  int totalIncome,  int totalExpense,  int? totalModifiedBalance,  List<StatsCategoryBreakdownDto> categoryBreakdown,  List<WeeklyExpenseDto> weeklyExpense)?  $default,) {final _that = this;
 switch (_that) {
 case _StatsPayloadDto() when $default != null:
-return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExpense,_that.categoryBreakdown,_that.weeklyExpense);case _:
+return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExpense,_that.totalModifiedBalance,_that.categoryBreakdown,_that.weeklyExpense);case _:
   return null;
 
 }
@@ -2160,13 +2164,14 @@ return $default(_that.periodFrom,_that.periodTo,_that.totalIncome,_that.totalExp
 @JsonSerializable()
 
 class _StatsPayloadDto implements StatsPayloadDto {
-  const _StatsPayloadDto({required this.periodFrom, required this.periodTo, required this.totalIncome, required this.totalExpense, required final  List<StatsCategoryBreakdownDto> categoryBreakdown, required final  List<WeeklyExpenseDto> weeklyExpense}): _categoryBreakdown = categoryBreakdown,_weeklyExpense = weeklyExpense;
+  const _StatsPayloadDto({required this.periodFrom, required this.periodTo, required this.totalIncome, required this.totalExpense, this.totalModifiedBalance, required final  List<StatsCategoryBreakdownDto> categoryBreakdown, required final  List<WeeklyExpenseDto> weeklyExpense}): _categoryBreakdown = categoryBreakdown,_weeklyExpense = weeklyExpense;
   factory _StatsPayloadDto.fromJson(Map<String, dynamic> json) => _$StatsPayloadDtoFromJson(json);
 
 @override final  String periodFrom;
 @override final  String periodTo;
 @override final  int totalIncome;
 @override final  int totalExpense;
+@override final  int? totalModifiedBalance;
  final  List<StatsCategoryBreakdownDto> _categoryBreakdown;
 @override List<StatsCategoryBreakdownDto> get categoryBreakdown {
   if (_categoryBreakdown is EqualUnmodifiableListView) return _categoryBreakdown;
@@ -2195,16 +2200,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StatsPayloadDto&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&(identical(other.totalIncome, totalIncome) || other.totalIncome == totalIncome)&&(identical(other.totalExpense, totalExpense) || other.totalExpense == totalExpense)&&const DeepCollectionEquality().equals(other._categoryBreakdown, _categoryBreakdown)&&const DeepCollectionEquality().equals(other._weeklyExpense, _weeklyExpense));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StatsPayloadDto&&(identical(other.periodFrom, periodFrom) || other.periodFrom == periodFrom)&&(identical(other.periodTo, periodTo) || other.periodTo == periodTo)&&(identical(other.totalIncome, totalIncome) || other.totalIncome == totalIncome)&&(identical(other.totalExpense, totalExpense) || other.totalExpense == totalExpense)&&(identical(other.totalModifiedBalance, totalModifiedBalance) || other.totalModifiedBalance == totalModifiedBalance)&&const DeepCollectionEquality().equals(other._categoryBreakdown, _categoryBreakdown)&&const DeepCollectionEquality().equals(other._weeklyExpense, _weeklyExpense));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,periodFrom,periodTo,totalIncome,totalExpense,const DeepCollectionEquality().hash(_categoryBreakdown),const DeepCollectionEquality().hash(_weeklyExpense));
+int get hashCode => Object.hash(runtimeType,periodFrom,periodTo,totalIncome,totalExpense,totalModifiedBalance,const DeepCollectionEquality().hash(_categoryBreakdown),const DeepCollectionEquality().hash(_weeklyExpense));
 
 @override
 String toString() {
-  return 'StatsPayloadDto(periodFrom: $periodFrom, periodTo: $periodTo, totalIncome: $totalIncome, totalExpense: $totalExpense, categoryBreakdown: $categoryBreakdown, weeklyExpense: $weeklyExpense)';
+  return 'StatsPayloadDto(periodFrom: $periodFrom, periodTo: $periodTo, totalIncome: $totalIncome, totalExpense: $totalExpense, totalModifiedBalance: $totalModifiedBalance, categoryBreakdown: $categoryBreakdown, weeklyExpense: $weeklyExpense)';
 }
 
 
@@ -2215,7 +2220,7 @@ abstract mixin class _$StatsPayloadDtoCopyWith<$Res> implements $StatsPayloadDto
   factory _$StatsPayloadDtoCopyWith(_StatsPayloadDto value, $Res Function(_StatsPayloadDto) _then) = __$StatsPayloadDtoCopyWithImpl;
 @override @useResult
 $Res call({
- String periodFrom, String periodTo, int totalIncome, int totalExpense, List<StatsCategoryBreakdownDto> categoryBreakdown, List<WeeklyExpenseDto> weeklyExpense
+ String periodFrom, String periodTo, int totalIncome, int totalExpense, int? totalModifiedBalance, List<StatsCategoryBreakdownDto> categoryBreakdown, List<WeeklyExpenseDto> weeklyExpense
 });
 
 
@@ -2232,13 +2237,14 @@ class __$StatsPayloadDtoCopyWithImpl<$Res>
 
 /// Create a copy of StatsPayloadDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? periodFrom = null,Object? periodTo = null,Object? totalIncome = null,Object? totalExpense = null,Object? categoryBreakdown = null,Object? weeklyExpense = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? periodFrom = null,Object? periodTo = null,Object? totalIncome = null,Object? totalExpense = null,Object? totalModifiedBalance = freezed,Object? categoryBreakdown = null,Object? weeklyExpense = null,}) {
   return _then(_StatsPayloadDto(
 periodFrom: null == periodFrom ? _self.periodFrom : periodFrom // ignore: cast_nullable_to_non_nullable
 as String,periodTo: null == periodTo ? _self.periodTo : periodTo // ignore: cast_nullable_to_non_nullable
 as String,totalIncome: null == totalIncome ? _self.totalIncome : totalIncome // ignore: cast_nullable_to_non_nullable
 as int,totalExpense: null == totalExpense ? _self.totalExpense : totalExpense // ignore: cast_nullable_to_non_nullable
-as int,categoryBreakdown: null == categoryBreakdown ? _self._categoryBreakdown : categoryBreakdown // ignore: cast_nullable_to_non_nullable
+as int,totalModifiedBalance: freezed == totalModifiedBalance ? _self.totalModifiedBalance : totalModifiedBalance // ignore: cast_nullable_to_non_nullable
+as int?,categoryBreakdown: null == categoryBreakdown ? _self._categoryBreakdown : categoryBreakdown // ignore: cast_nullable_to_non_nullable
 as List<StatsCategoryBreakdownDto>,weeklyExpense: null == weeklyExpense ? _self._weeklyExpense : weeklyExpense // ignore: cast_nullable_to_non_nullable
 as List<WeeklyExpenseDto>,
   ));

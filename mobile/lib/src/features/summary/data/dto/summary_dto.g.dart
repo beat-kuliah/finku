@@ -90,6 +90,7 @@ _DashboardPayloadDto _$DashboardPayloadDtoFromJson(
   totalBalance: (json['totalBalance'] as num).toInt(),
   periodIncome: (json['periodIncome'] as num).toInt(),
   periodExpense: (json['periodExpense'] as num).toInt(),
+  periodModifiedBalance: (json['periodModifiedBalance'] as num?)?.toInt(),
   periodFrom: json['periodFrom'] as String,
   periodTo: json['periodTo'] as String,
   dailyTrend: (json['dailyTrend'] as List<dynamic>)
@@ -112,6 +113,7 @@ Map<String, dynamic> _$DashboardPayloadDtoToJson(
   'totalBalance': instance.totalBalance,
   'periodIncome': instance.periodIncome,
   'periodExpense': instance.periodExpense,
+  'periodModifiedBalance': instance.periodModifiedBalance,
   'periodFrom': instance.periodFrom,
   'periodTo': instance.periodTo,
   'dailyTrend': instance.dailyTrend,
@@ -151,6 +153,7 @@ _StatsPayloadDto _$StatsPayloadDtoFromJson(Map<String, dynamic> json) =>
       periodTo: json['periodTo'] as String,
       totalIncome: (json['totalIncome'] as num).toInt(),
       totalExpense: (json['totalExpense'] as num).toInt(),
+      totalModifiedBalance: (json['totalModifiedBalance'] as num?)?.toInt(),
       categoryBreakdown: (json['categoryBreakdown'] as List<dynamic>)
           .map(
             (e) =>
@@ -168,6 +171,7 @@ Map<String, dynamic> _$StatsPayloadDtoToJson(_StatsPayloadDto instance) =>
       'periodTo': instance.periodTo,
       'totalIncome': instance.totalIncome,
       'totalExpense': instance.totalExpense,
+      'totalModifiedBalance': instance.totalModifiedBalance,
       'categoryBreakdown': instance.categoryBreakdown,
       'weeklyExpense': instance.weeklyExpense,
     };

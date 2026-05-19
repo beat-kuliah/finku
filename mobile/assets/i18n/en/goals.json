@@ -16,18 +16,9 @@
   "created": "Goal created.",
   "invalidForm": "Enter a valid name and target.",
   "noGoals": "No goals yet.",
-  "emptyMessage": "Create a savings goal and track your progress here.",
-  "addFunds": "Add funds",
   "deadlineLabel": "Deadline: {{date}}",
   "contributePlaceholder": "Save (+) / withdraw (-)",
   "update": "Update",
   "contributeInvalid": "Enter a savings amount (+ or -).",
-  "progressUpdated": "Progress updated.",
-  "contributeTitle": "Contribute to {{name}}",
-  "contributeAmount": "Amount (IDR)",
-  "contributeAction": "Contribute",
-  "fundAdded": "Funds added.",
-  "deleteTitle": "Delete goal?",
-  "deleteBody": "This cannot be undone.",
-  "deleted": "Goal deleted."
+  "progressUpdated": "Progress updated."
 }

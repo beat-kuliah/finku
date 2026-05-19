@@ -114,59 +114,108 @@ class _TotalsRow extends StatelessWidget {
   final StatsPayloadDto data;
   final L10nBundle l10n;
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _metric({
+    required BuildContext context,
+    required String label,
+    required int? amount,
+    required Color valueColor,
+    String? hint,
+  }) {
     final scheme = Theme.of(context).colorScheme;
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.t('stats', 'totalIncome'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                MoneyText(
-                  data.totalIncome,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: FinkuColors.success,
-                  ),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (amount != null)
+          MoneyText(
+            amount,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: valueColor,
+            ),
+          )
+        else
+          Text(
+            '—',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: scheme.onSurface.withValues(alpha: 0.45),
             ),
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.t('stats', 'totalExpense'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                MoneyText(
-                  data.totalExpense,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: FinkuColors.danger,
-                  ),
-                ),
-              ],
+        if (hint != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            hint,
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.35,
+              color: scheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
-      ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final wide = MediaQuery.sizeOf(context).width >= 520;
+
+    final income = _metric(
+      context: context,
+      label: l10n.t('stats', 'totalIncome'),
+      amount: data.totalIncome,
+      valueColor: FinkuColors.success,
+    );
+    final expense = _metric(
+      context: context,
+      label: l10n.t('stats', 'totalExpense'),
+      amount: data.totalExpense,
+      valueColor: FinkuColors.danger,
+    );
+    final modified = _metric(
+      context: context,
+      label: l10n.t('stats', 'totalModifiedBalance'),
+      amount: data.totalModifiedBalance,
+      valueColor: scheme.onSurface,
+      hint: l10n.t('stats', 'modifiedHint'),
+    );
+
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: wide
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: income),
+                Expanded(child: expense),
+                Expanded(child: modified),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: income),
+                    Expanded(child: expense),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                modified,
+              ],
+            ),
     );
   }
 }

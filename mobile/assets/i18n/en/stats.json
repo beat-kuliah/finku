@@ -4,6 +4,8 @@
   "period": "Period {{from}} — {{to}}",
   "totalIncome": "Total income",
   "totalExpense": "Total expense",
+  "totalModifiedBalance": "Balance adjustments (net)",
+  "modifiedHint": "Modified-only transactions; not included in income or expense.",
   "byCategory": "By category",
   "weeklyExpense": "Weekly (expense)",
   "noData": "No data yet.",

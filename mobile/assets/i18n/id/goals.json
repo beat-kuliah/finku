@@ -16,18 +16,9 @@
   "created": "Goal dibuat.",
   "invalidForm": "Isi nama dan target valid.",
   "noGoals": "Belum ada goal.",
-  "emptyMessage": "Buat target tabungan dan pantau progresnya di sini.",
-  "addFunds": "Tambah dana",
   "deadlineLabel": "Deadline: {{date}}",
   "contributePlaceholder": "Tabung (+) / tarik (-)",
   "update": "Update",
   "contributeInvalid": "Isi jumlah tabungan (+ atau -).",
-  "progressUpdated": "Progress diperbarui.",
-  "contributeTitle": "Setor ke {{name}}",
-  "contributeAmount": "Jumlah (IDR)",
-  "contributeAction": "Setor",
-  "fundAdded": "Dana ditambahkan.",
-  "deleteTitle": "Hapus target?",
-  "deleteBody": "Tindakan ini tidak bisa dibatalkan.",
-  "deleted": "Target dihapus."
+  "progressUpdated": "Progress diperbarui."
 }
