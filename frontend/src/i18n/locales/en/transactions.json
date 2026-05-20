@@ -38,6 +38,12 @@
   "allCategories": "All categories",
   "clearFilters": "Clear filters",
   "kindLockedHint": "Transaction type cannot be changed while editing.",
+  "editModifiedHint": "Balance-adjustment transactions can be converted to income or expense so they appear in analytics.",
+  "balanceDirection": "Adjustment direction",
+  "balanceIncrease": "Balance increased",
+  "balanceDecrease": "Balance decreased",
+  "modifiedOnlyHint": "Stays a balance adjustment only (not counted in income/expense reports).",
+  "convertToAnalyticsHint": "Will be recorded as an analytics transaction with the selected category.",
   "actions": "Actions",
   "modal": {
     "title": "Add transaction",

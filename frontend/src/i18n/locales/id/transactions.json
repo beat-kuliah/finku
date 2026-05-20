@@ -38,6 +38,12 @@
   "allCategories": "Semua kategori",
   "clearFilters": "Reset filter",
   "kindLockedHint": "Jenis transaksi tidak bisa diubah saat edit.",
+  "editModifiedHint": "Transaksi penyesuaian saldo bisa diubah menjadi pemasukan atau pengeluaran agar masuk analitik.",
+  "balanceDirection": "Arah penyesuaian",
+  "balanceIncrease": "Saldo naik",
+  "balanceDecrease": "Saldo turun",
+  "modifiedOnlyHint": "Tetap sebagai penyesuaian saldo (tidak masuk laporan pemasukan/pengeluaran).",
+  "convertToAnalyticsHint": "Akan dicatat sebagai transaksi analitik dengan kategori yang dipilih.",
   "actions": "Aksi",
   "modal": {
     "title": "Tambah transaksi",

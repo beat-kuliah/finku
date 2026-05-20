@@ -9,9 +9,11 @@ import * as txApi from "@/api/transactions";
 import { useDataVersion } from "@/store/dataVersion";
 import { getBcp47Tag } from "@/lib/locale";
 
-type Tab = "income" | "expense" | "transfer";
+type StandardTab = "income" | "expense" | "transfer";
+type EditKind = StandardTab | "modified";
 
-const TABS: Tab[] = ["expense", "income", "transfer"];
+const STANDARD_TABS: StandardTab[] = ["expense", "income", "transfer"];
+const MODIFIED_TABS: EditKind[] = ["modified", "expense", "income"];
 
 type Props = {
   transaction: txApi.Transaction | null;
@@ -19,11 +21,13 @@ type Props = {
   onSaved?: () => void;
 };
 
+function defaultCategoryId(list: catApi.Category[]) {
+  const def = list.find((c) => c.name.toLowerCase().includes("lainnya")) ?? list[0];
+  return def?.id ?? "";
+}
+
 export default function EditTransactionModal({ transaction, onClose, onSaved }: Props) {
   if (!transaction) return null;
-  // "modified" (balance-adjustment) transactions require isBalanceIncrease which
-  // the current update API does not expose; skip rendering for those.
-  if (transaction.kind === "modified") return null;
   return (
     <EditTransactionForm
       key={transaction.id}
@@ -45,10 +49,18 @@ function EditTransactionForm({
 }) {
   const { t } = useTranslation("transactions");
   const bump = useDataVersion((s) => s.bump);
+  const fromModified = transaction.kind === "modified";
 
-  const initialTab: Tab =
-    transaction.kind === "transfer" ? "transfer" : transaction.kind === "income" ? "income" : "expense";
-  const [tab] = useState<Tab>(initialTab);
+  const initialKind: EditKind = fromModified
+    ? "modified"
+    : transaction.kind === "transfer"
+      ? "transfer"
+      : transaction.kind === "income"
+        ? "income"
+        : "expense";
+
+  const [kind, setKind] = useState<EditKind>(initialKind);
+  const [isBalanceIncrease, setIsBalanceIncrease] = useState(transaction.isBalanceIncrease ?? true);
   const [wallets, setWallets] = useState<walletsApi.Wallet[]>([]);
   const [groupNameById, setGroupNameById] = useState<Map<string, string>>(() => new Map());
   const [catsIncome, setCatsIncome] = useState<catApi.Category[]>([]);
@@ -62,6 +74,9 @@ function EditTransactionForm({
   const [walletId, setWalletId] = useState(transaction.walletId);
   const [destWalletId, setDestWalletId] = useState(transaction.destWalletId ?? "");
   const [categoryId, setCategoryId] = useState(transaction.categoryId ?? "");
+
+  const tabs = fromModified ? MODIFIED_TABS : STANDARD_TABS;
+  const kindLocked = !fromModified;
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +95,12 @@ function EditTransactionForm({
           const expense = catRes.categories.filter((c) => c.kind === "expense");
           setCatsIncome(income);
           setCatsExpense(expense);
+          if (fromModified && !transaction.categoryId) {
+            const preferIncome = transaction.isBalanceIncrease === true;
+            setCategoryId(
+              preferIncome ? defaultCategoryId(income) : defaultCategoryId(expense),
+            );
+          }
         } catch (e) {
           if (!cancelled) toast.error(e instanceof Error ? e.message : t("modal.loadFailed"));
         } finally {
@@ -91,7 +112,17 @@ function EditTransactionForm({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [t]);
+  }, [t, fromModified, transaction.categoryId, transaction.isBalanceIncrease]);
+
+  const selectKind = (k: EditKind) => {
+    setKind(k);
+    if (!fromModified) return;
+    if (k === "income") {
+      setCategoryId((prev) => prev || defaultCategoryId(catsIncome));
+    } else if (k === "expense") {
+      setCategoryId((prev) => prev || defaultCategoryId(catsExpense));
+    }
+  };
 
   const walletLabel = (w: walletsApi.Wallet) => {
     const bal = w.balance.toLocaleString(getBcp47Tag());
@@ -119,7 +150,16 @@ function EditTransactionForm({
     }
     setSaving(true);
     try {
-      if (tab === "transfer") {
+      if (kind === "modified") {
+        await txApi.updateTransaction(transaction.id, {
+          kind: "modified",
+          walletId,
+          amount: amt,
+          occurredAt,
+          description: description || undefined,
+          isBalanceIncrease,
+        });
+      } else if (kind === "transfer") {
         if (!destWalletId || destWalletId === walletId) {
           toast.error(t("modal.selectDestWallet"));
           setSaving(false);
@@ -140,7 +180,7 @@ function EditTransactionForm({
           return;
         }
         await txApi.updateTransaction(transaction.id, {
-          kind: tab,
+          kind,
           walletId,
           categoryId,
           amount: amt,
@@ -175,15 +215,24 @@ function EditTransactionForm({
           </button>
         </div>
 
+        {fromModified && (
+          <p className="px-5 py-3 text-xs text-white/60 border-b border-white/10">{t("editModifiedHint")}</p>
+        )}
+
         <div className="flex gap-1 p-2 border-b border-white/10">
-          {TABS.map((k) => (
+          {tabs.map((k) => (
             <button
               key={k}
               type="button"
-              disabled
-              aria-disabled
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-not-allowed ${
-                tab === k ? "bg-gradient-neon text-white shadow-neon" : "text-white/30"
+              disabled={kindLocked}
+              aria-disabled={kindLocked}
+              onClick={() => !kindLocked && selectKind(k)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                kind === k
+                  ? "bg-gradient-neon text-white shadow-neon"
+                  : kindLocked
+                    ? "text-white/30 cursor-not-allowed"
+                    : "text-white/70 hover:bg-white/10"
               }`}
             >
               {t(k)}
@@ -228,7 +277,33 @@ function EditTransactionForm({
                   ))}
                 </select>
               </div>
-              {tab === "transfer" ? (
+
+              {kind === "modified" && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-white/60">{t("balanceDirection")}</p>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="balanceDir"
+                      checked={isBalanceIncrease}
+                      onChange={() => setIsBalanceIncrease(true)}
+                    />
+                    {t("balanceIncrease")}
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="balanceDir"
+                      checked={!isBalanceIncrease}
+                      onChange={() => setIsBalanceIncrease(false)}
+                    />
+                    {t("balanceDecrease")}
+                  </label>
+                  <p className="text-xs text-white/45">{t("modifiedOnlyHint")}</p>
+                </div>
+              )}
+
+              {kind === "transfer" ? (
                 <div>
                   <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.destWallet")}</label>
                   <select
@@ -247,7 +322,7 @@ function EditTransactionForm({
                       ))}
                   </select>
                 </div>
-              ) : (
+              ) : kind === "income" || kind === "expense" ? (
                 <div>
                   <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.category")}</label>
                   <select
@@ -257,15 +332,19 @@ function EditTransactionForm({
                     required
                   >
                     <option value="">{t("selectPlaceholder")}</option>
-                    {(tab === "income" ? catsIncome : catsExpense).map((c) => (
+                    {(kind === "income" ? catsIncome : catsExpense).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.icon ? `${c.icon} ` : ""}
                         {c.name}
                       </option>
                     ))}
                   </select>
+                  {fromModified && (
+                    <p className="text-xs text-white/45 mt-1.5">{t("convertToAnalyticsHint")}</p>
+                  )}
                 </div>
-              )}
+              ) : null}
+
               <div>
                 <label className="block text-xs font-semibold text-white/60 mb-1.5">{t("modal.note")}</label>
                 <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} />

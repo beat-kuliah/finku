@@ -63,6 +63,7 @@ export async function updateTransaction(
     amount: number;
     occurredAt: string;
     description?: string;
+    isBalanceIncrease?: boolean;
   },
 ) {
   return apiJson<{ transaction: Transaction }>(`/transactions/${id}`, {

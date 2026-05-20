@@ -287,17 +287,15 @@ export default function TransactionsPage() {
                       {formatIDR(tx.amount, false)}
                     </p>
                     <div className="flex items-center gap-1">
-                      {!isModified && (
-                        <button
-                          type="button"
-                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/70"
-                          aria-label={t("edit")}
-                          title={t("edit")}
-                          onClick={() => setEditTarget(tx)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-lg hover:bg-white/10 text-white/70"
+                        aria-label={t("edit")}
+                        title={t("edit")}
+                        onClick={() => setEditTarget(tx)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
                       <button
                         type="button"
                         className="p-1.5 rounded-lg hover:bg-white/10 text-rose-300"
