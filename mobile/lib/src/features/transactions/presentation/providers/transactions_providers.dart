@@ -7,7 +7,7 @@ import 'package:finku_mobile/src/features/transactions/data/transactions_api.dar
 
 final transactionSearchQueryProvider = StateProvider<String>((ref) => '');
 
-/// `null` = semua jenis; otherwise matches API `kind` (`expense` / `income` / `transfer`).
+/// `null` = semua jenis; otherwise matches API `kind` (`expense` / `income` / `transfer` / `modified`).
 final transactionKindFilterProvider = StateProvider<String?>((ref) => null);
 
 final transactionsListProvider = FutureProvider.autoDispose<List<TransactionDto>>((ref) async {

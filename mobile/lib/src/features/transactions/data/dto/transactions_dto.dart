@@ -16,6 +16,7 @@ abstract class TransactionDto with _$TransactionDto {
     required int amount,
     required String occurredAt,
     String? description,
+    bool? isBalanceIncrease,
     required String createdAt,
     required String updatedAt,
   }) = _TransactionDto;

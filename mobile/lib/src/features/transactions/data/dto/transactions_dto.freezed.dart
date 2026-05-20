@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TransactionDto {
 
- String get id; String get userId; String get kind; String get walletId; String? get destWalletId; String? get categoryId; String? get categoryName; int get amount; String get occurredAt; String? get description; String get createdAt; String get updatedAt;
+ String get id; String get userId; String get kind; String get walletId; String? get destWalletId; String? get categoryId; String? get categoryName; int get amount; String get occurredAt; String? get description; bool? get isBalanceIncrease; String get createdAt; String get updatedAt;
 /// Create a copy of TransactionDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $TransactionDtoCopyWith<TransactionDto> get copyWith => _$TransactionDtoCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TransactionDto&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.walletId, walletId) || other.walletId == walletId)&&(identical(other.destWalletId, destWalletId) || other.destWalletId == destWalletId)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.occurredAt, occurredAt) || other.occurredAt == occurredAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TransactionDto&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.walletId, walletId) || other.walletId == walletId)&&(identical(other.destWalletId, destWalletId) || other.destWalletId == destWalletId)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.occurredAt, occurredAt) || other.occurredAt == occurredAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.isBalanceIncrease, isBalanceIncrease) || other.isBalanceIncrease == isBalanceIncrease)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,kind,walletId,destWalletId,categoryId,categoryName,amount,occurredAt,description,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,userId,kind,walletId,destWalletId,categoryId,categoryName,amount,occurredAt,description,isBalanceIncrease,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'TransactionDto(id: $id, userId: $userId, kind: $kind, walletId: $walletId, destWalletId: $destWalletId, categoryId: $categoryId, categoryName: $categoryName, amount: $amount, occurredAt: $occurredAt, description: $description, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'TransactionDto(id: $id, userId: $userId, kind: $kind, walletId: $walletId, destWalletId: $destWalletId, categoryId: $categoryId, categoryName: $categoryName, amount: $amount, occurredAt: $occurredAt, description: $description, isBalanceIncrease: $isBalanceIncrease, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $TransactionDtoCopyWith<$Res>  {
   factory $TransactionDtoCopyWith(TransactionDto value, $Res Function(TransactionDto) _then) = _$TransactionDtoCopyWithImpl;
 @useResult
 $Res call({
- String id, String userId, String kind, String walletId, String? destWalletId, String? categoryId, String? categoryName, int amount, String occurredAt, String? description, String createdAt, String updatedAt
+ String id, String userId, String kind, String walletId, String? destWalletId, String? categoryId, String? categoryName, int amount, String occurredAt, String? description, bool? isBalanceIncrease, String createdAt, String updatedAt
 });
 
 
@@ -65,7 +65,7 @@ class _$TransactionDtoCopyWithImpl<$Res>
 
 /// Create a copy of TransactionDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? kind = null,Object? walletId = null,Object? destWalletId = freezed,Object? categoryId = freezed,Object? categoryName = freezed,Object? amount = null,Object? occurredAt = null,Object? description = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? kind = null,Object? walletId = null,Object? destWalletId = freezed,Object? categoryId = freezed,Object? categoryName = freezed,Object? amount = null,Object? occurredAt = null,Object? description = freezed,Object? isBalanceIncrease = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -77,7 +77,8 @@ as String?,categoryName: freezed == categoryName ? _self.categoryName : category
 as String?,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as int,occurredAt: null == occurredAt ? _self.occurredAt : occurredAt // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,isBalanceIncrease: freezed == isBalanceIncrease ? _self.isBalanceIncrease : isBalanceIncrease // ignore: cast_nullable_to_non_nullable
+as bool?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -164,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String kind,  String walletId,  String? destWalletId,  String? categoryId,  String? categoryName,  int amount,  String occurredAt,  String? description,  String createdAt,  String updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String kind,  String walletId,  String? destWalletId,  String? categoryId,  String? categoryName,  int amount,  String occurredAt,  String? description,  bool? isBalanceIncrease,  String createdAt,  String updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TransactionDto() when $default != null:
-return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWalletId,_that.categoryId,_that.categoryName,_that.amount,_that.occurredAt,_that.description,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWalletId,_that.categoryId,_that.categoryName,_that.amount,_that.occurredAt,_that.description,_that.isBalanceIncrease,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -185,10 +186,10 @@ return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWallet
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String kind,  String walletId,  String? destWalletId,  String? categoryId,  String? categoryName,  int amount,  String occurredAt,  String? description,  String createdAt,  String updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String kind,  String walletId,  String? destWalletId,  String? categoryId,  String? categoryName,  int amount,  String occurredAt,  String? description,  bool? isBalanceIncrease,  String createdAt,  String updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _TransactionDto():
-return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWalletId,_that.categoryId,_that.categoryName,_that.amount,_that.occurredAt,_that.description,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWalletId,_that.categoryId,_that.categoryName,_that.amount,_that.occurredAt,_that.description,_that.isBalanceIncrease,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +206,10 @@ return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWallet
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String kind,  String walletId,  String? destWalletId,  String? categoryId,  String? categoryName,  int amount,  String occurredAt,  String? description,  String createdAt,  String updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String kind,  String walletId,  String? destWalletId,  String? categoryId,  String? categoryName,  int amount,  String occurredAt,  String? description,  bool? isBalanceIncrease,  String createdAt,  String updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _TransactionDto() when $default != null:
-return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWalletId,_that.categoryId,_that.categoryName,_that.amount,_that.occurredAt,_that.description,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWalletId,_that.categoryId,_that.categoryName,_that.amount,_that.occurredAt,_that.description,_that.isBalanceIncrease,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -220,7 +221,7 @@ return $default(_that.id,_that.userId,_that.kind,_that.walletId,_that.destWallet
 @JsonSerializable()
 
 class _TransactionDto implements TransactionDto {
-  const _TransactionDto({required this.id, required this.userId, required this.kind, required this.walletId, this.destWalletId, this.categoryId, this.categoryName, required this.amount, required this.occurredAt, this.description, required this.createdAt, required this.updatedAt});
+  const _TransactionDto({required this.id, required this.userId, required this.kind, required this.walletId, this.destWalletId, this.categoryId, this.categoryName, required this.amount, required this.occurredAt, this.description, this.isBalanceIncrease, required this.createdAt, required this.updatedAt});
   factory _TransactionDto.fromJson(Map<String, dynamic> json) => _$TransactionDtoFromJson(json);
 
 @override final  String id;
@@ -233,6 +234,7 @@ class _TransactionDto implements TransactionDto {
 @override final  int amount;
 @override final  String occurredAt;
 @override final  String? description;
+@override final  bool? isBalanceIncrease;
 @override final  String createdAt;
 @override final  String updatedAt;
 
@@ -249,16 +251,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TransactionDto&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.walletId, walletId) || other.walletId == walletId)&&(identical(other.destWalletId, destWalletId) || other.destWalletId == destWalletId)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.occurredAt, occurredAt) || other.occurredAt == occurredAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TransactionDto&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.walletId, walletId) || other.walletId == walletId)&&(identical(other.destWalletId, destWalletId) || other.destWalletId == destWalletId)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.occurredAt, occurredAt) || other.occurredAt == occurredAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.isBalanceIncrease, isBalanceIncrease) || other.isBalanceIncrease == isBalanceIncrease)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,kind,walletId,destWalletId,categoryId,categoryName,amount,occurredAt,description,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,userId,kind,walletId,destWalletId,categoryId,categoryName,amount,occurredAt,description,isBalanceIncrease,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'TransactionDto(id: $id, userId: $userId, kind: $kind, walletId: $walletId, destWalletId: $destWalletId, categoryId: $categoryId, categoryName: $categoryName, amount: $amount, occurredAt: $occurredAt, description: $description, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'TransactionDto(id: $id, userId: $userId, kind: $kind, walletId: $walletId, destWalletId: $destWalletId, categoryId: $categoryId, categoryName: $categoryName, amount: $amount, occurredAt: $occurredAt, description: $description, isBalanceIncrease: $isBalanceIncrease, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -269,7 +271,7 @@ abstract mixin class _$TransactionDtoCopyWith<$Res> implements $TransactionDtoCo
   factory _$TransactionDtoCopyWith(_TransactionDto value, $Res Function(_TransactionDto) _then) = __$TransactionDtoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String userId, String kind, String walletId, String? destWalletId, String? categoryId, String? categoryName, int amount, String occurredAt, String? description, String createdAt, String updatedAt
+ String id, String userId, String kind, String walletId, String? destWalletId, String? categoryId, String? categoryName, int amount, String occurredAt, String? description, bool? isBalanceIncrease, String createdAt, String updatedAt
 });
 
 
@@ -286,7 +288,7 @@ class __$TransactionDtoCopyWithImpl<$Res>
 
 /// Create a copy of TransactionDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? kind = null,Object? walletId = null,Object? destWalletId = freezed,Object? categoryId = freezed,Object? categoryName = freezed,Object? amount = null,Object? occurredAt = null,Object? description = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? kind = null,Object? walletId = null,Object? destWalletId = freezed,Object? categoryId = freezed,Object? categoryName = freezed,Object? amount = null,Object? occurredAt = null,Object? description = freezed,Object? isBalanceIncrease = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_TransactionDto(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -298,7 +300,8 @@ as String?,categoryName: freezed == categoryName ? _self.categoryName : category
 as String?,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as int,occurredAt: null == occurredAt ? _self.occurredAt : occurredAt // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,isBalanceIncrease: freezed == isBalanceIncrease ? _self.isBalanceIncrease : isBalanceIncrease // ignore: cast_nullable_to_non_nullable
+as bool?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));

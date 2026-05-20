@@ -18,6 +18,7 @@ _TransactionDto _$TransactionDtoFromJson(Map<String, dynamic> json) =>
       amount: (json['amount'] as num).toInt(),
       occurredAt: json['occurredAt'] as String,
       description: json['description'] as String?,
+      isBalanceIncrease: json['isBalanceIncrease'] as bool?,
       createdAt: json['createdAt'] as String,
       updatedAt: json['updatedAt'] as String,
     );
@@ -34,6 +35,7 @@ Map<String, dynamic> _$TransactionDtoToJson(_TransactionDto instance) =>
       'amount': instance.amount,
       'occurredAt': instance.occurredAt,
       'description': instance.description,
+      'isBalanceIncrease': instance.isBalanceIncrease,
       'createdAt': instance.createdAt,
       'updatedAt': instance.updatedAt,
     };

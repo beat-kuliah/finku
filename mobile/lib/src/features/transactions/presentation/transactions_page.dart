@@ -8,6 +8,7 @@ import 'package:finku_mobile/src/core/l10n/app_locale.dart';
 import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
 import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/presentation/format_dates.dart';
+import 'package:finku_mobile/src/core/presentation/format_idr.dart';
 import 'package:finku_mobile/src/core/presentation/finku_empty_state.dart';
 import 'package:finku_mobile/src/core/presentation/finku_filter_chips.dart';
 import 'package:finku_mobile/src/core/presentation/finku_list_skeleton.dart';
@@ -105,6 +106,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   FinkuFilterChipData(id: 'expense', label: tx('expense')),
                   FinkuFilterChipData(id: 'income', label: tx('income')),
                   FinkuFilterChipData(id: 'transfer', label: tx('transfer')),
+                  FinkuFilterChipData(id: 'modified', label: tx('modified')),
                 ],
                 selectedId: kind ?? '',
                 onSelected: (id) =>
@@ -165,7 +167,10 @@ class _TransactionTile extends StatelessWidget {
   final TransactionDto tx;
 
   String _kindLabel(L10nBundle l10n, String kind) {
-    if (kind == 'income' || kind == 'expense' || kind == 'transfer') {
+    if (kind == 'income' ||
+        kind == 'expense' ||
+        kind == 'transfer' ||
+        kind == 'modified') {
       return l10n.t('transactions', kind);
     }
     return kind;
@@ -176,9 +181,13 @@ class _TransactionTile extends StatelessWidget {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final kindLabel = _kindLabel(l10n, tx.kind);
+    final isModified = tx.kind == 'modified';
+    final modifiedUp = isModified && tx.isBalanceIncrease == true;
+    final modifiedDown = isModified && tx.isBalanceIncrease == false;
     final (icon, color) = switch (tx.kind) {
       'income' => (Icons.south_west_rounded, FinkuColors.success),
       'transfer' => (Icons.swap_horiz_rounded, scheme.primary),
+      'modified' => (Icons.tune_rounded, scheme.onSurface.withValues(alpha: 0.85)),
       _ => (Icons.north_east_rounded, FinkuColors.danger),
     };
 
@@ -232,15 +241,12 @@ class _TransactionTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          MoneyText(
-            tx.amount,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 14,
-              color: tx.kind == 'income'
-                  ? FinkuColors.success
-                  : (tx.kind == 'transfer' ? scheme.primary : FinkuColors.danger),
-            ),
+          _AmountLabel(
+            amount: tx.amount,
+            kind: tx.kind,
+            modifiedUp: modifiedUp,
+            modifiedDown: modifiedDown,
+            scheme: scheme,
           ),
         ],
       ),
@@ -253,6 +259,53 @@ class _TransactionTile extends StatelessWidget {
     } catch (_) {
       return iso;
     }
+  }
+}
+
+class _AmountLabel extends StatelessWidget {
+  const _AmountLabel({
+    required this.amount,
+    required this.kind,
+    required this.modifiedUp,
+    required this.modifiedDown,
+    required this.scheme,
+  });
+
+  final int amount;
+  final String kind;
+  final bool modifiedUp;
+  final bool modifiedDown;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (kind) {
+      'income' => FinkuColors.success,
+      'transfer' => scheme.primary,
+      'modified' when modifiedUp => FinkuColors.success,
+      'modified' => scheme.onSurface,
+      _ => FinkuColors.danger,
+    };
+    final style = TextStyle(
+      fontWeight: FontWeight.w800,
+      fontSize: 14,
+      color: color,
+    );
+
+    if (modifiedUp) {
+      return Text(
+        '+${formatIdr(amount, withPrefix: false)}',
+        style: style,
+      );
+    }
+    if (modifiedDown) {
+      return Text(
+        '-${formatIdr(amount, withPrefix: false)}',
+        style: style,
+      );
+    }
+
+    return MoneyText(amount, style: style);
   }
 }
 
