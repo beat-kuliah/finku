@@ -154,6 +154,7 @@ class BudgetPage extends ConsumerWidget {
                       padding: const EdgeInsets.only(bottom: 10),
                       child: _BudgetTile(
                         budget: b,
+                        onEdit: () => _openEditLimit(context, ref, b),
                         onDelete: () => _confirmDelete(context, ref, b.id),
                       ),
                     )),
@@ -268,6 +269,47 @@ class BudgetPage extends ConsumerWidget {
     }
   }
 
+  Future<void> _openEditLimit(BuildContext context, WidgetRef ref, BudgetDto b) async {
+    final l10n = context.l10n;
+    final limitCtrl = TextEditingController(text: b.limitAmount.toString());
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final dialogL10n = ctx.l10n;
+        return AlertDialog(
+          title: Text(dialogL10n.t('budget', 'editBudget')),
+          content: TextField(
+            controller: limitCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: dialogL10n.t('budget', 'limit')),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(dialogL10n.t('budget', 'cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(dialogL10n.t('budget', 'save'))),
+          ],
+        );
+      },
+    );
+    if (ok != true) return;
+    final lim = int.tryParse(limitCtrl.text.replaceAll(RegExp(r'[^\d]'), ''));
+    if (lim == null || lim <= 0) return;
+    try {
+      await ref.read(budgetsApiProvider).updateLimit(b.id, lim);
+      ref.read(dataRevisionProvider.notifier).state++;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('budget', 'updated'))),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(mapDioToApiError(e).message)),
+        );
+      }
+    }
+  }
+
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, String id) async {
     final l10n = context.l10n;
     final ok = await showDialog<bool>(
@@ -310,9 +352,10 @@ class BudgetPage extends ConsumerWidget {
 }
 
 class _BudgetTile extends StatelessWidget {
-  const _BudgetTile({required this.budget, required this.onDelete});
+  const _BudgetTile({required this.budget, required this.onEdit, required this.onDelete});
 
   final BudgetDto budget;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -365,6 +408,11 @@ class _BudgetTile extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            tooltip: l10n.t('budget', 'editBudget'),
+            onPressed: onEdit,
+            icon: Icon(Icons.edit_outlined, color: scheme.primary),
           ),
           IconButton(
             tooltip: l10n.t('wallets', 'delete'),

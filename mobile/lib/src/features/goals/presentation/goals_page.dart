@@ -70,11 +70,13 @@ class GoalsPage extends ConsumerWidget {
     final l10n = context.l10n;
     final nameCtrl = TextEditingController();
     final targetCtrl = TextEditingController();
+    DateTime? deadline;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         final dialogL10n = ctx.l10n;
-        return AlertDialog(
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => AlertDialog(
           title: Text(dialogL10n.t('goals', 'newGoal')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -92,6 +94,23 @@ class GoalsPage extends ConsumerWidget {
                   hintText: '10000000',
                 ),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: deadline ?? DateTime.now().add(const Duration(days: 90)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) setLocal(() => deadline = picked);
+                },
+                child: Text(
+                  deadline != null
+                      ? '${dialogL10n.t('goals', 'deadline')}: ${deadline!.toIso8601String().substring(0, 10)}'
+                      : dialogL10n.t('goals', 'deadline'),
+                ),
+              ),
             ],
           ),
           actions: [
@@ -104,6 +123,7 @@ class GoalsPage extends ConsumerWidget {
               child: Text(dialogL10n.t('goals', 'save')),
             ),
           ],
+        ),
         );
       },
     );
@@ -117,8 +137,15 @@ class GoalsPage extends ConsumerWidget {
       );
       return;
     }
+    final deadlineStr = deadline != null
+        ? '${deadline!.year.toString().padLeft(4, '0')}-${deadline!.month.toString().padLeft(2, '0')}-${deadline!.day.toString().padLeft(2, '0')}'
+        : null;
     try {
-      await ref.read(goalsApiProvider).create(name: name, targetAmount: t);
+      await ref.read(goalsApiProvider).create(
+            name: name,
+            targetAmount: t,
+            deadline: deadlineStr,
+          );
       ref.read(dataRevisionProvider.notifier).state++;
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -216,6 +243,10 @@ class _GoalCard extends StatelessWidget {
                 onPressed: () => _contribute(context, ref, goal),
                 child: Text(l10n.t('goals', 'addFunds')),
               ),
+              TextButton(
+                onPressed: () => _openEdit(context, ref, goal),
+                child: Text(l10n.t('goals', 'editGoal')),
+              ),
               const Spacer(),
               TextButton(
                 onPressed: () => _confirmDelete(context, ref, goal.id),
@@ -229,6 +260,92 @@ class _GoalCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openEdit(BuildContext context, WidgetRef ref, GoalDto g) async {
+    final l10n = context.l10n;
+    final nameCtrl = TextEditingController(text: g.name);
+    final targetCtrl = TextEditingController(text: g.targetAmount.toString());
+    DateTime? deadline;
+    if (g.deadline != null && g.deadline!.isNotEmpty) {
+      try {
+        deadline = DateTime.parse(g.deadline!);
+      } catch (_) {}
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final dialogL10n = ctx.l10n;
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => AlertDialog(
+            title: Text(dialogL10n.t('goals', 'editGoal')),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(labelText: dialogL10n.t('goals', 'name')),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: targetCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: dialogL10n.t('goals', 'target')),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: deadline ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) setLocal(() => deadline = picked);
+                  },
+                  child: Text(
+                    deadline != null
+                        ? '${dialogL10n.t('goals', 'deadline')}: ${deadline!.toIso8601String().substring(0, 10)}'
+                        : dialogL10n.t('goals', 'deadline'),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(dialogL10n.t('goals', 'cancel'))),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(dialogL10n.t('goals', 'save'))),
+            ],
+          ),
+        );
+      },
+    );
+    if (ok != true) return;
+    final name = nameCtrl.text.trim();
+    final t = int.tryParse(targetCtrl.text.replaceAll(RegExp(r'[^\d]'), ''));
+    if (name.isEmpty || t == null || t <= 0) return;
+    final deadlineStr = deadline != null
+        ? '${deadline!.year.toString().padLeft(4, '0')}-${deadline!.month.toString().padLeft(2, '0')}-${deadline!.day.toString().padLeft(2, '0')}'
+        : null;
+    try {
+      await ref.read(goalsApiProvider).update(
+            g.id,
+            name: name,
+            targetAmount: t,
+            deadline: deadlineStr,
+          );
+      ref.read(dataRevisionProvider.notifier).state++;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('goals', 'updated'))),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(mapDioToApiError(e).message)),
+        );
+      }
+    }
   }
 
   Future<void> _contribute(BuildContext context, WidgetRef ref, GoalDto g) async {

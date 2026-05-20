@@ -15,6 +15,9 @@
   "category": "Kategori pengeluaran",
   "limit": "Limit (IDR)",
   "added": "Budget ditambahkan.",
+  "updated": "Budget diperbarui.",
+  "editBudget": "Edit limit budget",
+  "emptyMessage": "Atur limit per kategori untuk bulan ini.",
   "invalidForm": "Pilih kategori dan isi limit valid.",
   "noBudgets": "Belum ada budget untuk periode ini.",
   "pausedArchived": " · dijeda (kategori diarsipkan)"

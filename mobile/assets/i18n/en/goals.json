@@ -20,5 +20,15 @@
   "contributePlaceholder": "Save (+) / withdraw (-)",
   "update": "Update",
   "contributeInvalid": "Enter a savings amount (+ or -).",
-  "progressUpdated": "Progress updated."
+  "progressUpdated": "Progress updated.",
+  "editGoal": "Edit goal",
+  "updated": "Goal updated.",
+  "deleted": "Goal deleted.",
+  "emptyMessage": "Create a savings target to track progress.",
+  "deleteTitle": "Delete goal",
+  "deleteBody": "Delete this goal permanently?",
+  "contributeTitle": "Add funds to {{name}}",
+  "contributeAmount": "Amount",
+  "contributeAction": "Add",
+  "fundAdded": "Funds added."
 }

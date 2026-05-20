@@ -20,5 +20,15 @@
   "contributePlaceholder": "Tabung (+) / tarik (-)",
   "update": "Update",
   "contributeInvalid": "Isi jumlah tabungan (+ atau -).",
-  "progressUpdated": "Progress diperbarui."
+  "progressUpdated": "Progress diperbarui.",
+  "editGoal": "Edit goal",
+  "updated": "Goal diperbarui.",
+  "deleted": "Goal dihapus.",
+  "emptyMessage": "Buat target tabungan untuk lacak progres.",
+  "deleteTitle": "Hapus goal",
+  "deleteBody": "Hapus goal ini permanen?",
+  "contributeTitle": "Tambah dana ke {{name}}",
+  "contributeAmount": "Jumlah",
+  "contributeAction": "Tambah",
+  "fundAdded": "Dana ditambahkan."
 }
