@@ -73,4 +73,20 @@ class WalletsApi {
       throw mapDioToApiError(e);
     }
   }
+
+  /// `POST /wallets/:id/adjust-balance` — Phase 0 stub. Track B will implement.
+  ///
+  /// `recordAs` accepts `'income'`, `'expense'`, or `'modified'` and decides
+  /// what kind of synthetic transaction is created server-side to reconcile
+  /// the wallet's current balance with [targetBalance].
+  Future<WalletDto> adjustBalance(
+    String id, {
+    required num targetBalance,
+    required DateTime date,
+    required String recordAs,
+    String? categoryId,
+    String? note,
+  }) async {
+    throw UnimplementedError('Phase 0 stub: adjustBalance');
+  }
 }

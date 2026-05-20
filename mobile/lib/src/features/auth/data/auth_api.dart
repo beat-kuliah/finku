@@ -67,6 +67,56 @@ class AuthApi {
     return MeResponseDto.fromJson(res.data ?? {}).user;
   }
 
+  // ---------------------------------------------------------------------------
+  // Phase 0 stubs — Track D will implement these bodies.
+  //
+  // All methods mirror the web endpoints under `/auth/*` and must, on success,
+  // bump `dataRevisionProvider` from the caller (controller layer) so that
+  // dependent providers refresh.
+  // ---------------------------------------------------------------------------
+
+  /// `PATCH /auth/password` — change password when the user already has one.
+  Future<AuthUserDto> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    throw UnimplementedError('Phase 0 stub: changePassword');
+  }
+
+  /// `PATCH /auth/password` — set initial password for OAuth-only users
+  /// (no `currentPassword` required).
+  Future<AuthUserDto> setInitialPassword({
+    required String newPassword,
+  }) async {
+    throw UnimplementedError('Phase 0 stub: setInitialPassword');
+  }
+
+  /// `PATCH /auth/username` — set or change the user's username.
+  Future<AuthUserDto> setUsername({required String username}) async {
+    throw UnimplementedError('Phase 0 stub: setUsername');
+  }
+
+  /// `GET /auth/username/suggest` — server-side suggestion based on name/email.
+  Future<String> suggestUsername() async {
+    throw UnimplementedError('Phase 0 stub: suggestUsername');
+  }
+
+  /// `PATCH /auth/profile` — update profile fields (name + finance prefs).
+  Future<AuthUserDto> updateProfile({
+    String? name,
+    String? currency,
+    num? monthlyIncome,
+    int? payday,
+  }) async {
+    throw UnimplementedError('Phase 0 stub: updateProfile');
+  }
+
+  /// `DELETE /auth/identities/:provider` — unlink an OAuth identity
+  /// (e.g. `google`).
+  Future<AuthUserDto> unlinkProvider(String provider) async {
+    throw UnimplementedError('Phase 0 stub: unlinkProvider');
+  }
+
   @Deprecated('Use mapDioToApiError from dio_api_mapper.dart')
   static ApiError mapDioError(Object error) => mapDioToApiError(error);
 }

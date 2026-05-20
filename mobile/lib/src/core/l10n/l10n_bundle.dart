@@ -6,6 +6,15 @@ import 'package:finku_mobile/src/core/l10n/app_locale.dart';
 import 'package:finku_mobile/src/core/l10n/locale_controller.dart';
 
 /// JSON namespaces mirrored from the web app (excluding `landing`).
+///
+/// **Ownership convention (Phase 0):** Each namespace JSON file is owned by
+/// exactly one feature track. Tracks may freely add or modify keys in their
+/// own namespace without coordinating with others.
+///
+/// `profile.json` is **co-owned**: keys under `categories.*` belong to
+/// Track C (Categories management); all other keys belong to Track D
+/// (Profile/Auth). Tracks must only add — never remove — keys outside their
+/// scope.
 const kL10nNamespaces = <String>[
   'common',
   'auth',
