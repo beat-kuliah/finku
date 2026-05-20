@@ -25,6 +25,29 @@
   "save": "Simpan",
   "saving": "Menyimpan…",
   "selectPlaceholder": "— Pilih —",
+  "edit": {
+    "title": "Edit transaksi"
+  },
+  "delete": {
+    "title": "Hapus transaksi",
+    "body": "Tindakan ini tidak bisa dibatalkan. Hapus transaksi ini?",
+    "confirm": "Hapus",
+    "done": "Transaksi dihapus."
+  },
+  "filter": {
+    "title": "Filter",
+    "clear": "Hapus filter",
+    "dateRange": "Rentang tanggal",
+    "from": "Dari",
+    "to": "Sampai",
+    "anyWallet": "Semua dompet",
+    "anyCategory": "Semua kategori"
+  },
+  "modified": {
+    "direction": "Arah",
+    "up": "Naik",
+    "down": "Turun"
+  },
   "modal": {
     "title": "Tambah transaksi",
     "amount": "Jumlah (IDR)",

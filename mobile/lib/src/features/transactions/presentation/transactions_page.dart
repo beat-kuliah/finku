@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:finku_mobile/src/core/errors/api_error.dart';
 import 'package:finku_mobile/src/core/l10n/app_locale.dart';
@@ -13,11 +14,15 @@ import 'package:finku_mobile/src/core/presentation/finku_empty_state.dart';
 import 'package:finku_mobile/src/core/presentation/finku_filter_chips.dart';
 import 'package:finku_mobile/src/core/presentation/finku_list_skeleton.dart';
 import 'package:finku_mobile/src/core/presentation/money_text.dart';
+import 'package:finku_mobile/src/core/providers/api_providers.dart';
+import 'package:finku_mobile/src/core/providers/data_revision_provider.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/glass_card.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/placeholder_section.dart';
 import 'package:finku_mobile/src/features/transactions/data/dto/transactions_dto.dart';
 import 'package:finku_mobile/src/features/transactions/presentation/providers/transactions_providers.dart';
+import 'package:finku_mobile/src/features/transactions/presentation/widgets/edit_transaction_sheet.dart';
+import 'package:finku_mobile/src/features/transactions/presentation/widgets/transactions_filter_sheet.dart';
 
 class TransactionsPage extends ConsumerStatefulWidget {
   const TransactionsPage({super.key});
@@ -44,6 +49,58 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     });
   }
 
+  Future<void> _confirmDelete(TransactionDto tx) async {
+    final l10n = ref.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.t('transactions', 'delete.title')),
+        content: Text(l10n.t('transactions', 'delete.body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.t('common', 'cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.t('transactions', 'delete.confirm')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(transactionsApiProvider).delete(tx.id);
+      ref.read(dataRevisionProvider.notifier).state++;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('transactions', 'delete.done'))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e is ApiError ? e.message : e.toString())),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportCsv(List<TransactionDto> list) async {
+    final l10n = ref.l10n;
+    final header = 'date,kind,amount,description,walletId,categoryId\n';
+    final rows = list.map((t) {
+      final desc = (t.description ?? '').replaceAll('"', '""');
+      return '${t.occurredAt},${t.kind},${t.amount},"$desc",${t.walletId},${t.categoryId ?? ''}';
+    }).join('\n');
+    await Share.share('$header$rows', subject: l10n.t('transactions', 'exportCsv'));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('transactions', 'csvDownloaded'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = ref.l10n;
@@ -52,6 +109,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     final scheme = Theme.of(context).colorScheme;
     final kind = ref.watch(transactionKindFilterProvider);
     final asyncTx = ref.watch(transactionsListProvider);
+    final summary = ref.watch(transactionsSummaryProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -99,6 +157,74 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   },
                 ),
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () => showTransactionsFilterSheet(context),
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    label: Text(tx('filter.title')),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: asyncTx.valueOrNull == null
+                        ? null
+                        : () => _exportCsv(asyncTx.valueOrNull!),
+                    icon: const Icon(Icons.ios_share_rounded, size: 18),
+                    label: Text(tx('exportCsv')),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tx('totalIncome'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          Text(
+                            formatIdr(summary.income),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: FinkuColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tx('totalExpense'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          Text(
+                            formatIdr(summary.expense),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: FinkuColors.danger,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 14),
               FinkuFilterChips(
                 chips: [
@@ -137,7 +263,11 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: list.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 10),
-                        itemBuilder: (context, i) => _TransactionTile(tx: list[i]),
+                        itemBuilder: (context, i) => _TransactionTile(
+                          tx: list[i],
+                          onEdit: () => showEditTransactionSheet(context, list[i]),
+                          onDelete: () => _confirmDelete(list[i]),
+                        ),
                       ),
                     );
                   },
@@ -162,9 +292,15 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
 }
 
 class _TransactionTile extends StatelessWidget {
-  const _TransactionTile({required this.tx});
+  const _TransactionTile({
+    required this.tx,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final TransactionDto tx;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   String _kindLabel(L10nBundle l10n, String kind) {
     if (kind == 'income' ||
@@ -198,7 +334,7 @@ class _TransactionTile extends StatelessWidget {
             : kindLabel);
 
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -214,39 +350,51 @@ class _TransactionTile extends StatelessWidget {
               child: Icon(icon, color: color, size: 22),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: scheme.onSurface,
+            child: InkWell(
+              onTap: onEdit,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: scheme.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_formatDate(tx.occurredAt, l10n.locale)} · $kindLabel',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: scheme.onSurface.withValues(alpha: 0.62),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_formatDate(tx.occurredAt, l10n.locale)} · $kindLabel',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: scheme.onSurface.withValues(alpha: 0.62),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 8),
           _AmountLabel(
             amount: tx.amount,
             kind: tx.kind,
             modifiedUp: modifiedUp,
             modifiedDown: modifiedDown,
             scheme: scheme,
+          ),
+          IconButton(
+            tooltip: l10n.t('transactions', 'edit.title'),
+            onPressed: onEdit,
+            icon: Icon(Icons.edit_outlined, size: 20, color: scheme.primary),
+          ),
+          IconButton(
+            tooltip: l10n.t('transactions', 'delete.title'),
+            onPressed: onDelete,
+            icon: Icon(Icons.delete_outline_rounded, size: 20, color: scheme.error),
           ),
         ],
       ),
@@ -293,16 +441,10 @@ class _AmountLabel extends StatelessWidget {
     );
 
     if (modifiedUp) {
-      return Text(
-        '+${formatIdr(amount, withPrefix: false)}',
-        style: style,
-      );
+      return Text('+${formatIdr(amount, withPrefix: false)}', style: style);
     }
     if (modifiedDown) {
-      return Text(
-        '-${formatIdr(amount, withPrefix: false)}',
-        style: style,
-      );
+      return Text('-${formatIdr(amount, withPrefix: false)}', style: style);
     }
 
     return MoneyText(amount, style: style);

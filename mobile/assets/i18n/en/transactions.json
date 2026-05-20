@@ -25,6 +25,29 @@
   "save": "Save",
   "saving": "Saving…",
   "selectPlaceholder": "— Select —",
+  "edit": {
+    "title": "Edit transaction"
+  },
+  "delete": {
+    "title": "Delete transaction",
+    "body": "This cannot be undone. Delete this transaction?",
+    "confirm": "Delete",
+    "done": "Transaction deleted."
+  },
+  "filter": {
+    "title": "Filters",
+    "clear": "Clear",
+    "dateRange": "Date range",
+    "from": "From",
+    "to": "To",
+    "anyWallet": "Any wallet",
+    "anyCategory": "Any category"
+  },
+  "modified": {
+    "direction": "Direction",
+    "up": "Increase",
+    "down": "Decrease"
+  },
   "modal": {
     "title": "Add transaction",
     "amount": "Amount (IDR)",
