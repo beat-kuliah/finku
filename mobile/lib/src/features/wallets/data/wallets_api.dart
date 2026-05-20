@@ -74,19 +74,28 @@ class WalletsApi {
     }
   }
 
-  /// `POST /wallets/:id/adjust-balance` — Phase 0 stub. Track B will implement.
-  ///
-  /// `recordAs` accepts `'income'`, `'expense'`, or `'modified'` and decides
-  /// what kind of synthetic transaction is created server-side to reconcile
-  /// the wallet's current balance with [targetBalance].
   Future<WalletDto> adjustBalance(
     String id, {
-    required num targetBalance,
-    required DateTime date,
+    required int newBalance,
     required String recordAs,
     String? categoryId,
-    String? note,
+    String? occurredAt,
+    String? description,
   }) async {
-    throw UnimplementedError('Phase 0 stub: adjustBalance');
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/wallets/$id/adjust-balance',
+        data: {
+          'newBalance': newBalance,
+          'recordAs': recordAs,
+          if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+          if (occurredAt != null && occurredAt.isNotEmpty) 'occurredAt': occurredAt,
+          if (description != null && description.isNotEmpty) 'description': description,
+        },
+      );
+      return WalletEnvelopeDto.fromJson(res.data ?? const {}).wallet;
+    } catch (e) {
+      throw mapDioToApiError(e);
+    }
   }
 }

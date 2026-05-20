@@ -7,9 +7,12 @@ import 'package:finku_mobile/src/features/wallets/data/dto/wallets_dto.dart';
 
 typedef WalletsSnapshot = ({List<WalletDto> wallets, List<WalletGroupDto> groups});
 
+final walletsTabProvider = StateProvider<bool>((ref) => false);
+
 final walletsDataProvider = FutureProvider.autoDispose<WalletsSnapshot>((ref) async {
   ref.watch(dataRevisionProvider);
-  final wallets = await ref.watch(walletsApiProvider).list();
-  final groups = await ref.watch(walletGroupsApiProvider).list();
+  final archived = ref.watch(walletsTabProvider);
+  final wallets = await ref.watch(walletsApiProvider).list(archived: archived);
+  final groups = archived ? <WalletGroupDto>[] : await ref.watch(walletGroupsApiProvider).list();
   return (wallets: wallets, groups: groups);
 });
