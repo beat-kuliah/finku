@@ -3,6 +3,7 @@
   "failed": "Gagal",
   "cancel": "Batal",
   "save": "Simpan",
+  "saveChanges": "Simpan perubahan",
   "loading": "Memuat…",
   "selectPlaceholder": "— Pilih —",
   "title": "Budget",
@@ -12,10 +13,19 @@
   "addBudget": "Tambah Budget",
   "totalUsed": "Total terpakai",
   "newBudget": "Budget baru",
+  "editTitle": "Edit budget",
   "category": "Kategori pengeluaran",
   "limit": "Limit (IDR)",
   "added": "Budget ditambahkan.",
+  "saved": "Budget diperbarui.",
+  "deleted": "Budget dihapus.",
+  "editLimit": "Edit limit",
+  "deleteBudget": "Hapus budget",
+  "deleteConfirm": "Hapus budget ini?",
   "invalidForm": "Pilih kategori dan isi limit valid.",
   "noBudgets": "Belum ada budget untuk periode ini.",
-  "pausedArchived": " · dijeda (kategori diarsipkan)"
+  "pausedArchived": " · dijeda (kategori diarsipkan)",
+  "prevMonth": "Bulan sebelumnya",
+  "nextMonth": "Bulan berikutnya",
+  "monthLabel": "Bulan terpilih"
 }

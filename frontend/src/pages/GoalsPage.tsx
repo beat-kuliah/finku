@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Pencil, Trash2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import * as goalsApi from "@/api/goals";
 import { useDataVersion } from "@/store/dataVersion";
-
-const bumpData = () => useDataVersion.getState().bump();
 import { formatIDR } from "@/lib/format";
 import { toast } from "sonner";
+
+const bumpData = () => useDataVersion.getState().bump();
+
+type EditorState = { mode: "create" } | { mode: "edit"; goalId: string };
 
 export default function GoalsPage() {
   const { t } = useTranslation("goals");
   const version = useDataVersion((s) => s.version);
   const [goals, setGoals] = useState<goalsApi.Goal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
+  const [editor, setEditor] = useState<EditorState | null>(null);
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -38,7 +41,21 @@ export default function GoalsPage() {
     return () => window.clearTimeout(timer);
   }, [load, version]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openCreate = () => {
+    setName("");
+    setTarget("");
+    setDeadline("");
+    setEditor({ mode: "create" });
+  };
+
+  const openEdit = (g: goalsApi.Goal) => {
+    setName(g.name);
+    setTarget(String(g.targetAmount));
+    setDeadline(g.deadline ?? "");
+    setEditor({ mode: "edit", goalId: g.id });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetAmount = Number(String(target).replace(/\./g, ""));
     if (!name.trim() || !Number.isFinite(targetAmount) || targetAmount <= 0) {
@@ -46,16 +63,37 @@ export default function GoalsPage() {
       return;
     }
     try {
-      await goalsApi.createGoal({
-        name: name.trim(),
-        targetAmount,
-        deadline: deadline || undefined,
-      });
-      toast.success(t("created"));
-      setShowCreate(false);
+      if (editor?.mode === "edit") {
+        await goalsApi.updateGoal(editor.goalId, {
+          name: name.trim(),
+          targetAmount,
+          deadline: deadline || undefined,
+        });
+        toast.success(t("updated"));
+      } else {
+        await goalsApi.createGoal({
+          name: name.trim(),
+          targetAmount,
+          deadline: deadline || undefined,
+        });
+        toast.success(t("created"));
+      }
+      setEditor(null);
       setName("");
       setTarget("");
       setDeadline("");
+      bumpData();
+      void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("failed"));
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t("deleteConfirm"))) return;
+    try {
+      await goalsApi.deleteGoal(id);
+      toast.success(t("deleted"));
       bumpData();
       void load();
     } catch (err) {
@@ -88,18 +126,20 @@ export default function GoalsPage() {
           <p className="text-xs uppercase tracking-wider text-white/60 font-semibold">{t("sectionLabel")}</p>
           <h1 className="font-display text-3xl font-extrabold mt-1">{t("heading")}</h1>
         </div>
-        <button type="button" className="btn-primary !py-2.5 !px-4 text-sm" onClick={() => setShowCreate(true)}>
+        <button type="button" className="btn-primary !py-2.5 !px-4 text-sm" onClick={openCreate}>
           {t("createGoal")}
         </button>
       </section>
 
-      {showCreate && (
+      {editor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <form
-            onSubmit={(e) => void handleCreate(e)}
+            onSubmit={(e) => void handleSubmit(e)}
             className="card !p-6 max-w-md w-full space-y-4 border border-white/15"
           >
-            <h3 className="font-display font-bold text-lg">{t("newGoal")}</h3>
+            <h3 className="font-display font-bold text-lg">
+              {editor.mode === "edit" ? t("editGoal") : t("newGoal")}
+            </h3>
             <div>
               <label className="block text-xs text-white/60 mb-1">{t("name")}</label>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -113,11 +153,11 @@ export default function GoalsPage() {
               <input type="date" className="input" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
             </div>
             <div className="flex gap-2 justify-end">
-              <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
+              <button type="button" className="btn-secondary" onClick={() => setEditor(null)}>
                 {t("cancel")}
               </button>
               <button type="submit" className="btn-primary">
-                {t("save")}
+                {editor.mode === "edit" ? t("saveChanges") : t("save")}
               </button>
             </div>
           </form>
@@ -139,7 +179,25 @@ export default function GoalsPage() {
                     <p className="text-xs text-white/50 mt-1">{t("deadlineLabel", { date: g.deadline })}</p>
                   )}
                 </div>
-                <span className="text-neon-lime font-bold">{pct}%</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-neon-lime font-bold">{pct}%</span>
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-lg hover:bg-white/10 text-white/70"
+                    aria-label={t("edit")}
+                    onClick={() => openEdit(g)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-lg hover:bg-white/10 text-red-300"
+                    aria-label={t("delete")}
+                    onClick={() => void handleDelete(g.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                 <div className="h-full rounded-full bg-gradient-neon" style={{ width: `${pct}%` }} />

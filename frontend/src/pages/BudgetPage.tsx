@@ -1,13 +1,26 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import * as budgetsApi from "@/api/budgets";
 import * as catApi from "@/api/categories";
 import { useDataVersion } from "@/store/dataVersion";
-
-const bumpData = () => useDataVersion.getState().bump();
+import { formatDate } from "@/lib/dates";
 import { formatIDR } from "@/lib/format";
 import { toast } from "sonner";
+
+const bumpData = () => useDataVersion.getState().bump();
+
+function monthBounds(month: Date) {
+  const from = new Date(month.getFullYear(), month.getMonth(), 1);
+  const to = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: iso(from), to: iso(to) };
+}
+
+type EditorState =
+  | { mode: "add" }
+  | { mode: "edit"; budgetId: string; categoryId: string; limit: string };
 
 export default function BudgetPage() {
   const { t } = useTranslation("budget");
@@ -15,15 +28,16 @@ export default function BudgetPage() {
   const [items, setItems] = useState<budgetsApi.Budget[]>([]);
   const [cats, setCats] = useState<catApi.Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
+  const [monthAnchor, setMonthAnchor] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [editor, setEditor] = useState<EditorState | null>(null);
   const [newCat, setNewCat] = useState("");
   const [newLimit, setNewLimit] = useState("");
 
-  const monthStart = new Date();
-  monthStart.setUTCDate(1);
-  monthStart.setUTCHours(0, 0, 0, 0);
-  const from = monthStart.toISOString().slice(0, 10);
-  const to = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).toISOString().slice(0, 10);
+  const { from, to } = useMemo(() => monthBounds(monthAnchor), [monthAnchor]);
+  const monthTitle = formatDate(monthAnchor, { month: "long", year: "numeric" });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,22 +63,55 @@ export default function BudgetPage() {
   const totalSpent = items.reduce((s, b) => s + b.spent, 0);
   const pct = totalLimit > 0 ? Math.min(100, Math.round((totalSpent / totalLimit) * 100)) : 0;
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const openAdd = () => {
+    setNewCat("");
+    setNewLimit("");
+    setEditor({ mode: "add" });
+  };
+
+  const openEdit = (item: budgetsApi.Budget) => {
+    setNewCat(item.categoryId);
+    setNewLimit(String(item.limitAmount));
+    setEditor({ mode: "edit", budgetId: item.id, categoryId: item.categoryId, limit: String(item.limitAmount) });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const lim = Number(String(newLimit).replace(/\./g, ""));
-    if (!newCat || !Number.isFinite(lim) || lim <= 0) {
+    if (!Number.isFinite(lim) || lim <= 0) {
       toast.error(t("invalidForm"));
       return;
     }
     try {
-      await budgetsApi.createBudget({
-        categoryId: newCat,
-        periodAnchor: from,
-        limitAmount: lim,
-      });
-      toast.success(t("added"));
-      setShowAdd(false);
+      if (editor?.mode === "edit") {
+        await budgetsApi.updateBudget(editor.budgetId, lim);
+        toast.success(t("saved"));
+      } else {
+        if (!newCat) {
+          toast.error(t("invalidForm"));
+          return;
+        }
+        await budgetsApi.createBudget({
+          categoryId: newCat,
+          periodAnchor: from,
+          limitAmount: lim,
+        });
+        toast.success(t("added"));
+      }
+      setEditor(null);
       setNewLimit("");
+      bumpData();
+      void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("failed"));
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t("deleteConfirm"))) return;
+    try {
+      await budgetsApi.deleteBudget(id);
+      toast.success(t("deleted"));
       bumpData();
       void load();
     } catch (err) {
@@ -80,10 +127,35 @@ export default function BudgetPage() {
             <p className="text-xs uppercase tracking-wider text-white/60 font-semibold">{t("sectionLabel")}</p>
             <h1 className="font-display text-3xl font-extrabold mt-1">{t("heading")}</h1>
           </div>
-          <button type="button" className="btn-primary !py-2.5 !px-4 text-sm" onClick={() => setShowAdd(true)}>
+          <button type="button" className="btn-primary !py-2.5 !px-4 text-sm" onClick={openAdd}>
             {t("addBudget")}
           </button>
         </div>
+
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            className="p-2 rounded-xl border border-white/15 hover:bg-white/10"
+            aria-label={t("prevMonth")}
+            onClick={() =>
+              setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
+            }
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="font-semibold min-w-[160px] text-center">{monthTitle}</span>
+          <button
+            type="button"
+            className="p-2 rounded-xl border border-white/15 hover:bg-white/10"
+            aria-label={t("nextMonth")}
+            onClick={() =>
+              setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
+            }
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+
         <div className="mt-6">
           <div className="flex items-center justify-between text-sm text-white/70 mb-2">
             <span>{t("totalUsed")}</span>
@@ -97,16 +169,24 @@ export default function BudgetPage() {
         </div>
       </section>
 
-      {showAdd && (
+      {editor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <form
-            onSubmit={(e) => void handleAdd(e)}
+            onSubmit={(e) => void handleSubmit(e)}
             className="card !p-6 max-w-md w-full space-y-4 border border-white/15"
           >
-            <h3 className="font-display font-bold text-lg">{t("newBudget")}</h3>
+            <h3 className="font-display font-bold text-lg">
+              {editor.mode === "edit" ? t("editTitle") : t("newBudget")}
+            </h3>
             <div>
               <label className="block text-xs text-white/60 mb-1">{t("category")}</label>
-              <select className="input" value={newCat} onChange={(e) => setNewCat(e.target.value)} required>
+              <select
+                className="input"
+                value={newCat}
+                onChange={(e) => setNewCat(e.target.value)}
+                required
+                disabled={editor.mode === "edit"}
+              >
                 <option value="">{t("selectPlaceholder")}</option>
                 {cats.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -121,11 +201,11 @@ export default function BudgetPage() {
               <input className="input" value={newLimit} onChange={(e) => setNewLimit(e.target.value)} required />
             </div>
             <div className="flex gap-2 justify-end">
-              <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
+              <button type="button" className="btn-secondary" onClick={() => setEditor(null)}>
                 {t("cancel")}
               </button>
               <button type="submit" className="btn-primary">
-                {t("save")}
+                {editor.mode === "edit" ? t("saveChanges") : t("save")}
               </button>
             </div>
           </form>
@@ -143,7 +223,25 @@ export default function BudgetPage() {
               <div key={item.id} className="card !p-5">
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <span className="font-semibold">{item.categoryName ?? item.categoryId}</span>
-                  <span className={`text-xs font-semibold ${over ? "text-red-400" : "text-neon-lime"}`}>{p}%</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-semibold ${over ? "text-red-400" : "text-neon-lime"}`}>{p}%</span>
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-lg hover:bg-white/10 text-white/70"
+                      aria-label={t("editLimit")}
+                      onClick={() => openEdit(item)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-lg hover:bg-white/10 text-red-300"
+                      aria-label={t("deleteBudget")}
+                      onClick={() => void handleDelete(item.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                   <div

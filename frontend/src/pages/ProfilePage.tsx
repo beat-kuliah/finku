@@ -17,6 +17,7 @@ import {
   Eye,
   EyeOff,
   Languages,
+  Pencil,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { useTheme } from "@/lib/theme";
@@ -78,6 +79,11 @@ export default function ProfilePage() {
   const [catTab, setCatTab] = useState<"active" | "archived">("active");
   const [newCatName, setNewCatName] = useState("");
   const [newCatKind, setNewCatKind] = useState<"income" | "expense">("expense");
+  const [catEdit, setCatEdit] = useState<{ id: string; name: string; icon: string } | null>(null);
+  const [editCat, setEditCat] = useState<catApi.Category | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [editCatIcon, setEditCatIcon] = useState("");
+  const [editCatSaving, setEditCatSaving] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -234,6 +240,48 @@ export default function ProfilePage() {
       );
     } finally {
       setSaveBusy(false);
+    }
+  };
+
+  const openEditCategory = (c: catApi.Category) => {
+    setEditCat(c);
+    setEditCatName(c.name);
+    setEditCatIcon(c.icon ?? "");
+  };
+
+  const closeEditCategory = () => {
+    setEditCat(null);
+    setEditCatName("");
+    setEditCatIcon("");
+  };
+
+  const handleSubmitEditCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCat) return;
+    const name = editCatName.trim();
+    if (name.length < 1) {
+      toast.error(t("failed"));
+      return;
+    }
+    const icon = editCatIcon.trim();
+    setEditCatSaving(true);
+    try {
+      await catApi.updateCategory(editCat.id, {
+        name,
+        icon: icon === "" ? undefined : icon,
+      });
+      const [ca, cz] = await Promise.all([
+        catApi.listCategories(false),
+        catApi.listCategories(true),
+      ]);
+      setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+      setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+      toast.success(t("saved"));
+      closeEditCategory();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("failed"));
+    } finally {
+      setEditCatSaving(false);
     }
   };
 
@@ -543,47 +591,135 @@ export default function ProfilePage() {
                   ({c.kind === "income" ? t("kindIncome") : t("kindExpense")})
                 </span>
               </span>
-              {catTab === "active" ? (
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="text-xs text-amber-300 hover:underline"
-                  onClick={async () => {
-                    try {
-                      await catApi.archiveCategory(c.id);
-                      const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
-                      setCatsActive(ca.categories.filter((x) => !x.archivedAt));
-                      setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
-                      toast.success(t("categoryArchived"));
-                    } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t("failed"));
-                    }
-                  }}
+                  className="text-white/60 hover:text-white transition-colors"
+                  aria-label={t("editCategory")}
+                  title={t("editCategory")}
+                  onClick={() => openEditCategory(c)}
                 >
-                  {t("archiveCategory")}
+                  <Pencil className="w-4 h-4" />
                 </button>
-              ) : (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="text-xs text-neon-lime hover:underline"
-                  onClick={async () => {
-                    try {
-                      await catApi.unarchiveCategory(c.id);
-                      const [ca, cz] = await Promise.all([catApi.listCategories(false), catApi.listCategories(true)]);
-                      setCatsActive(ca.categories.filter((x) => !x.archivedAt));
-                      setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
-                      toast.success(t("categoryRestored"));
-                    } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t("failed"));
-                    }
-                  }}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/70"
+                  aria-label={t("editCategory")}
+                  onClick={() =>
+                    setCatEdit({ id: c.id, name: c.name, icon: c.icon ?? "" })
+                  }
                 >
-                  {t("restoreCategory")}
+                  <Pencil className="w-3.5 h-3.5" />
                 </button>
-              )}
+                {catTab === "active" ? (
+                  <button
+                    type="button"
+                    className="text-xs text-amber-300 hover:underline"
+                    onClick={async () => {
+                      try {
+                        await catApi.archiveCategory(c.id);
+                        const [ca, cz] = await Promise.all([
+                          catApi.listCategories(false),
+                          catApi.listCategories(true),
+                        ]);
+                        setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+                        setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+                        toast.success(t("categoryArchived"));
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : t("failed"));
+                      }
+                    }}
+                  >
+                    {t("archiveCategory")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-xs text-neon-lime hover:underline"
+                    onClick={async () => {
+                      try {
+                        await catApi.unarchiveCategory(c.id);
+                        const [ca, cz] = await Promise.all([
+                          catApi.listCategories(false),
+                          catApi.listCategories(true),
+                        ]);
+                        setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+                        setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+                        toast.success(t("categoryRestored"));
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : t("failed"));
+                      }
+                    }}
+                  >
+                    {t("restoreCategory")}
+                  </button>
+                )}
+              </div>
+              </div>
             </li>
           ))}
         </ul>
       </section>
+
+      {catEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = catEdit.name.trim();
+              if (!n) return;
+              void (async () => {
+                try {
+                  await catApi.updateCategory(catEdit.id, {
+                    name: n,
+                    icon: catEdit.icon.trim() || undefined,
+                  });
+                  const [ca, cz] = await Promise.all([
+                    catApi.listCategories(false),
+                    catApi.listCategories(true),
+                  ]);
+                  setCatsActive(ca.categories.filter((x) => !x.archivedAt));
+                  setCatsArchived(cz.categories.filter((x) => !!x.archivedAt));
+                  toast.success(t("categoryUpdated"));
+                  setCatEdit(null);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : t("failed"));
+                }
+              })();
+            }}
+            className="card !p-6 max-w-md w-full space-y-4 border border-white/15"
+          >
+            <h3 className="font-display font-bold text-lg">{t("editTitle")}</h3>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">{t("categoryName")}</label>
+              <input
+                className="input"
+                value={catEdit.name}
+                onChange={(e) => setCatEdit((s) => (s ? { ...s, name: e.target.value } : s))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">{t("categoryIcon")}</label>
+              <input
+                className="input"
+                placeholder="🍔"
+                value={catEdit.icon}
+                onChange={(e) => setCatEdit((s) => (s ? { ...s, icon: e.target.value } : s))}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" className="btn-secondary" onClick={() => setCatEdit(null)}>
+                {t("editCancel")}
+              </button>
+              <button type="submit" className="btn-primary">
+                {t("saveChanges")}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <section className="grid lg:grid-cols-2 gap-5">
         <div className="card !p-6 space-y-4">
@@ -684,6 +820,55 @@ export default function ProfilePage() {
           </div>
         </div>
       </section>
+
+      {editCat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <form
+            onSubmit={(e) => void handleSubmitEditCategory(e)}
+            className="card !p-6 max-w-md w-full space-y-4 border border-white/15"
+          >
+            <h3 className="font-display font-bold text-lg">{t("editTitle")}</h3>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">{t("categoryName")}</label>
+              <input
+                className="input"
+                value={editCatName}
+                onChange={(e) => setEditCatName(e.target.value)}
+                minLength={1}
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">{t("categoryIcon")}</label>
+              <input
+                className="input"
+                value={editCatIcon}
+                onChange={(e) => setEditCatIcon(e.target.value)}
+                placeholder="🍔"
+                maxLength={8}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={closeEditCategory}
+                disabled={editCatSaving}
+              >
+                {t("editCancel")}
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={editCatSaving || editCatName.trim().length < 1}
+              >
+                {editCatSaving ? t("saving") : t("saveChanges")}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </AppShell>
   );
 }

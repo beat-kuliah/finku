@@ -3,6 +3,7 @@
   "failed": "Failed",
   "cancel": "Cancel",
   "save": "Save",
+  "saveChanges": "Save changes",
   "loading": "Loading…",
   "selectPlaceholder": "— Select —",
   "title": "Budget",
@@ -12,10 +13,19 @@
   "addBudget": "Add budget",
   "totalUsed": "Total used",
   "newBudget": "New budget",
+  "editTitle": "Edit budget",
   "category": "Expense category",
   "limit": "Limit (IDR)",
   "added": "Budget added.",
+  "saved": "Budget updated.",
+  "deleted": "Budget deleted.",
+  "editLimit": "Edit limit",
+  "deleteBudget": "Delete budget",
+  "deleteConfirm": "Delete this budget?",
   "invalidForm": "Select a category and enter a valid limit.",
   "noBudgets": "No budgets for this period yet.",
-  "pausedArchived": " · paused (category archived)"
+  "pausedArchived": " · paused (category archived)",
+  "prevMonth": "Previous month",
+  "nextMonth": "Next month",
+  "monthLabel": "Selected month"
 }

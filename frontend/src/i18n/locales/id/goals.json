@@ -20,5 +20,12 @@
   "contributePlaceholder": "Tabung (+) / tarik (-)",
   "update": "Update",
   "contributeInvalid": "Isi jumlah tabungan (+ atau -).",
-  "progressUpdated": "Progress diperbarui."
+  "progressUpdated": "Progress diperbarui.",
+  "edit": "Edit",
+  "delete": "Hapus",
+  "deleteConfirm": "Hapus goal ini?",
+  "editGoal": "Edit goal",
+  "saveChanges": "Simpan perubahan",
+  "updated": "Goal diperbarui.",
+  "deleted": "Goal dihapus."
 }

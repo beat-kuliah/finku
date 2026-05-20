@@ -20,5 +20,12 @@
   "contributePlaceholder": "Save (+) / withdraw (-)",
   "update": "Update",
   "contributeInvalid": "Enter a savings amount (+ or -).",
-  "progressUpdated": "Progress updated."
+  "progressUpdated": "Progress updated.",
+  "edit": "Edit",
+  "delete": "Delete",
+  "deleteConfirm": "Delete this goal?",
+  "editGoal": "Edit goal",
+  "saveChanges": "Save changes",
+  "updated": "Goal updated.",
+  "deleted": "Goal deleted."
 }
