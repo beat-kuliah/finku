@@ -75,46 +75,104 @@ class AuthApi {
   // dependent providers refresh.
   // ---------------------------------------------------------------------------
 
+  AuthUserDto _userFromResponse(Map<String, dynamic> data) {
+    return MeResponseDto.fromJson(data).user;
+  }
+
   /// `PATCH /auth/password` — change password when the user already has one.
   Future<AuthUserDto> changePassword({
     required String currentPassword,
     required String newPassword,
+    required String confirmNewPassword,
   }) async {
-    throw UnimplementedError('Phase 0 stub: changePassword');
+    try {
+      final res = await _dio.patch<Map<String, dynamic>>(
+        '/auth/password',
+        data: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+          'confirmNewPassword': confirmNewPassword,
+        },
+      );
+      return _userFromResponse(res.data ?? {});
+    } catch (e) {
+      throw mapDioToApiError(e);
+    }
   }
 
-  /// `PATCH /auth/password` — set initial password for OAuth-only users
-  /// (no `currentPassword` required).
+  /// `PATCH /auth/password` — set initial password for OAuth-only users.
   Future<AuthUserDto> setInitialPassword({
     required String newPassword,
+    required String confirmNewPassword,
   }) async {
-    throw UnimplementedError('Phase 0 stub: setInitialPassword');
+    try {
+      final res = await _dio.patch<Map<String, dynamic>>(
+        '/auth/password',
+        data: {
+          'newPassword': newPassword,
+          'confirmNewPassword': confirmNewPassword,
+        },
+      );
+      return _userFromResponse(res.data ?? {});
+    } catch (e) {
+      throw mapDioToApiError(e);
+    }
   }
 
   /// `PATCH /auth/username` — set or change the user's username.
   Future<AuthUserDto> setUsername({required String username}) async {
-    throw UnimplementedError('Phase 0 stub: setUsername');
+    try {
+      final res = await _dio.patch<Map<String, dynamic>>(
+        '/auth/username',
+        data: {'username': username},
+      );
+      return _userFromResponse(res.data ?? {});
+    } catch (e) {
+      throw mapDioToApiError(e);
+    }
   }
 
   /// `GET /auth/username/suggest` — server-side suggestion based on name/email.
   Future<String> suggestUsername() async {
-    throw UnimplementedError('Phase 0 stub: suggestUsername');
+    try {
+      final res = await _dio.get<Map<String, dynamic>>('/auth/username/suggest');
+      return (res.data?['suggestion'] as String?) ?? '';
+    } catch (e) {
+      throw mapDioToApiError(e);
+    }
   }
 
-  /// `PATCH /auth/profile` — update profile fields (name + finance prefs).
+  /// `PATCH /auth/profile` — update profile fields (finance prefs).
   Future<AuthUserDto> updateProfile({
     String? name,
     String? currency,
-    num? monthlyIncome,
+    int? monthlyIncome,
     int? payday,
   }) async {
-    throw UnimplementedError('Phase 0 stub: updateProfile');
+    try {
+      final data = <String, dynamic>{
+        if (name != null) 'name': name,
+        if (currency != null) 'currency': currency,
+        if (monthlyIncome != null) 'monthlyIncome': monthlyIncome,
+        if (payday != null) 'payday': payday,
+      };
+      final res = await _dio.patch<Map<String, dynamic>>('/auth/profile', data: data);
+      return _userFromResponse(res.data ?? {});
+    } catch (e) {
+      throw mapDioToApiError(e);
+    }
   }
 
-  /// `DELETE /auth/identities/:provider` — unlink an OAuth identity
-  /// (e.g. `google`).
+  /// `DELETE /auth/identities/:provider` — unlink an OAuth identity.
   Future<AuthUserDto> unlinkProvider(String provider) async {
-    throw UnimplementedError('Phase 0 stub: unlinkProvider');
+    try {
+      final res = await _dio.delete<Map<String, dynamic>>(
+        '/auth/identities/${Uri.encodeComponent(provider)}',
+      );
+      return _userFromResponse(res.data ?? {});
+    } catch (e) {
+      throw mapDioToApiError(e);
+    }
   }
 
   @Deprecated('Use mapDioToApiError from dio_api_mapper.dart')

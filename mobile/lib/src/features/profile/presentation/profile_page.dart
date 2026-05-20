@@ -12,6 +12,8 @@ import 'package:finku_mobile/src/core/theme/app_colors.dart';
 import 'package:finku_mobile/src/core/theme/theme_controller.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
 import 'package:finku_mobile/src/features/profile/presentation/providers/preferences_provider.dart';
+import 'package:finku_mobile/src/features/categories/presentation/widgets/categories_profile_entry.dart';
+import 'package:finku_mobile/src/features/profile/presentation/widgets/profile_account_sections.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/glass_card.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/gradient_button.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/placeholder_section.dart';
@@ -91,6 +93,30 @@ class ProfilePage extends ConsumerWidget {
             ],
           ),
         ),
+        if (user != null) ...[
+          const SizedBox(height: 16),
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: ProfileUsernameSection(user: user),
+          ),
+          const SizedBox(height: 16),
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: ProfilePasswordSection(hasPassword: user.hasPassword),
+          ),
+          const SizedBox(height: 16),
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: ProfileOAuthSection(user: user),
+          ),
+          const SizedBox(height: 16),
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: ProfileFinanceSection(user: user),
+          ),
+          const SizedBox(height: 16),
+          const CategoriesProfileEntry(),
+        ],
         const SizedBox(height: 16),
         GlassCard(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),

@@ -7,6 +7,7 @@ import 'package:finku_mobile/src/core/network/dio_client.dart';
 import 'package:finku_mobile/src/core/secure_storage/token_store_provider.dart';
 import 'package:finku_mobile/src/features/auth/data/auth_api.dart';
 import 'package:finku_mobile/src/features/auth/data/auth_repository.dart';
+import 'package:finku_mobile/src/features/auth/data/dto/auth_dto.dart';
 import 'package:finku_mobile/src/features/auth/domain/auth_state.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -148,4 +149,58 @@ class AuthController extends AsyncNotifier<AuthState> {
     ref.read(accessTokenProvider.notifier).state = null;
     state = AsyncData(AuthState.unauthenticated());
   }
+
+  void updateUser(AuthUserDto user) {
+    final token = state.valueOrNull?.accessToken;
+    if (token == null) return;
+    state = AsyncData(AuthState.authenticated(user, token));
+  }
+
+  Future<AuthUserDto> setUsername(String username) async {
+    final user = await ref.read(authApiProvider).setUsername(username: username);
+    updateUser(user);
+    return user;
+  }
+
+  Future<AuthUserDto> changePassword({
+    required String newPassword,
+    required String confirmNewPassword,
+    String? currentPassword,
+  }) async {
+    final api = ref.read(authApiProvider);
+    final user = currentPassword != null && currentPassword.isNotEmpty
+        ? await api.changePassword(
+            currentPassword: currentPassword,
+            newPassword: newPassword,
+            confirmNewPassword: confirmNewPassword,
+          )
+        : await api.setInitialPassword(
+            newPassword: newPassword,
+            confirmNewPassword: confirmNewPassword,
+          );
+    updateUser(user);
+    return user;
+  }
+
+  Future<AuthUserDto> updateProfile({
+    String? currency,
+    int? monthlyIncome,
+    int? payday,
+  }) async {
+    final user = await ref.read(authApiProvider).updateProfile(
+          currency: currency,
+          monthlyIncome: monthlyIncome,
+          payday: payday,
+        );
+    updateUser(user);
+    return user;
+  }
+
+  Future<AuthUserDto> unlinkProvider(String provider) async {
+    final user = await ref.read(authApiProvider).unlinkProvider(provider);
+    updateUser(user);
+    return user;
+  }
+
+  Future<String> suggestUsername() => ref.read(authApiProvider).suggestUsername();
 }
