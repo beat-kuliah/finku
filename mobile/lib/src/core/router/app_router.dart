@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:finku_mobile/src/features/auth/domain/auth_state.dart';
+import 'package:finku_mobile/src/features/auth/presentation/pages/landing_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/pages/login_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/pages/register_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/pages/splash_page.dart';
+import 'package:finku_mobile/src/features/categories/presentation/categories_page.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
 import 'package:finku_mobile/src/features/budget/presentation/budget_page.dart';
 import 'package:finku_mobile/src/features/dashboard/presentation/dashboard_page.dart';
@@ -17,7 +19,7 @@ import 'package:finku_mobile/src/features/transactions/presentation/transactions
 import 'package:finku_mobile/src/features/wallets/presentation/wallets_page.dart';
 
 /// Routes outside the shell (no bottom dock / header chrome).
-const _kAuthRoutes = <String>{'/splash', '/login', '/register'};
+const _kAuthRoutes = <String>{'/splash', '/landing', '/login', '/register'};
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -25,8 +27,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: kDebugMode,
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
+      GoRoute(path: '/landing', builder: (context, state) => const LandingPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
+      GoRoute(path: '/categories', builder: (context, state) => const CategoriesPage()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
@@ -108,10 +112,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       final authState = auth.valueOrNull ?? AuthState.unauthenticated();
       if (!authState.isAuthenticated) {
-        if (loc == '/login' || loc == '/register') {
+        if (loc == '/landing' || loc == '/login' || loc == '/register') {
           return null;
         }
-        return '/login';
+        return '/landing';
       }
 
       if (_kAuthRoutes.contains(loc)) {

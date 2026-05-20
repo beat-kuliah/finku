@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:finku_mobile/src/core/l10n/l10n_bundle.dart';
 import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/theme/app_colors.dart';
+import 'package:finku_mobile/src/features/auth/domain/auth_state.dart';
 import 'package:finku_mobile/src/features/auth/presentation/providers/auth_controller.dart';
+import 'package:finku_mobile/src/features/auth/presentation/widgets/set_username_modal.dart';
 import 'package:finku_mobile/src/features/shell/presentation/shell_branch.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/add_transaction_sheet.dart';
 import 'package:finku_mobile/src/features/shell/presentation/widgets/add_tx_fab.dart';
@@ -56,6 +58,23 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  bool _usernameGateShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowUsernameGate());
+  }
+
+  void _maybeShowUsernameGate() {
+    if (_usernameGateShown || !mounted) return;
+    final auth = ref.read(authControllerProvider).valueOrNull;
+    if (auth?.usernameRequired == true) {
+      _usernameGateShown = true;
+      showSetUsernameModal(context, blocking: true);
+    }
+  }
+
   ShellBranch? _cachedDockItemsBranch;
   String? _cachedDockLocaleCode;
   List<BottomNavItemData>? _cachedDockItems;
@@ -97,6 +116,17 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<AuthState>>(authControllerProvider, (prev, next) {
+      final required = next.valueOrNull?.usernameRequired ?? false;
+      if (required && !_usernameGateShown && mounted) {
+        _usernameGateShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) showSetUsernameModal(context, blocking: true);
+        });
+      }
+      if (!required) _usernameGateShown = false;
+    });
+
     final l10n = ref.l10n;
     final activeBranch = ShellBranch.fromIndex(widget.navigationShell.currentIndex);
     final width = MediaQuery.sizeOf(context).width;

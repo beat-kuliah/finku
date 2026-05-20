@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:finku_mobile/src/core/l10n/l10n_extensions.dart';
 import 'package:finku_mobile/src/core/theme/theme_controller.dart';
@@ -58,6 +59,15 @@ class MoreSheet extends ConsumerWidget {
               icon: Icons.person_rounded,
               label: ShellBranch.profile.navLabel(l10n),
               onTap: () => onNavigate(ShellBranch.profile),
+            ),
+            const SizedBox(height: 8),
+            _SheetTile(
+              icon: Icons.category_rounded,
+              label: l10n.t('profile', 'manageCategories'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/categories');
+              },
             ),
             const SizedBox(height: 16),
             Container(
