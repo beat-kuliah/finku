@@ -57,10 +57,14 @@ func (c *Client) GlobalRateLimitAllow(ctx context.Context, ip string) (bool, err
 	return c.bucketAllow(ctx, "api:rl:"+ip, c.cfg.GlobalRateLimitMax, c.cfg.GlobalRateLimitWin)
 }
 
+// bucketAllow is a fixed-window counter. We only set the TTL on the FIRST
+// increment (via ExpireNX) so the window naturally elapses; calling Expire on
+// every request would refresh the TTL and lock a client out indefinitely as
+// long as it keeps probing the endpoint.
 func (c *Client) bucketAllow(ctx context.Context, key string, max int, window time.Duration) (bool, error) {
 	pipe := c.rdb.Pipeline()
 	incr := pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, window)
+	pipe.ExpireNX(ctx, key, window)
 	if _, err := pipe.Exec(ctx); err != nil {
 		return false, err
 	}
